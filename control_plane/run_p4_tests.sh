@@ -1,0 +1,1 @@
+/home/admin/bf-sde-9.7.1/run_p4_tests.sh
