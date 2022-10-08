@@ -19,27 +19,35 @@
  ******************************************************************************/
 
 #include <core.p4>
-#if __TARGET_TOFINO__ == 3
-#include <t3na.p4>
-#elif __TARGET_TOFINO__ == 2
 #include <t2na.p4>
-#else
-#include <tna.p4>
-#endif
 
 #include "common/headers.p4"
 #include "common/util.p4"
 
+#if __TARGET_TOFINO__ == 1
+typedef bit<3> mirror_type_t;
+#else
+typedef bit<4> mirror_type_t;
+#endif
 
-struct metadata_t {}
+struct headers_t {
+    ethernet_h ethernet;
+    arp_h arp;
+    ipv4_h ipv4;
+    tcp_h tcp;
+}
+
+struct ingress_metadata_t {}
+
+struct egress_metadata_t {}
 
 // ---------------------------------------------------------------------------
 // Ingress parser
 // ---------------------------------------------------------------------------
 parser SwitchIngressParser(
         packet_in pkt,
-        out header_t hdr,
-        out metadata_t ig_md,
+        out headers_t hdr,
+        out ingress_metadata_t ig_md,
         out ingress_intrinsic_metadata_t ig_intr_md) {
 
     TofinoIngressParser() tofino_parser;
@@ -51,26 +59,121 @@ parser SwitchIngressParser(
 
     state parse_ethernet {
         pkt.extract(hdr.ethernet);
-        transition select (hdr.ethernet.ether_type) {
-            ETHERTYPE_IPV4 : parse_ipv4;
-            default : reject;
+        transition select(hdr.ethernet.ether_type){
+            ETHERTYPE_IPV4: parse_ipv4;
+			ETHERTYPE_ARP: parse_arp;
+            default: reject;
         }
     }
 
     state parse_ipv4 {
         pkt.extract(hdr.ipv4);
+        transition parse_tcp;
+    }
+
+    state parse_tcp {
+        pkt.extract(hdr.tcp);
         transition accept;
     }
+
+    state parse_arp {
+		pkt.extract(hdr.arp);
+		transition accept;
+	}
 }
 
+// ---------------------------------------------------------------------------
+// Switch Ingress MAU
+// ---------------------------------------------------------------------------
+// ingress bloom filter, is able to set bloom filter's content and check whether hit
+// only one action
+control SwitchIngress(
+        inout headers_t hdr,
+        inout ingress_metadata_t ig_md,
+        in ingress_intrinsic_metadata_t ig_intr_md,
+        in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
+        inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md,
+        inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
+
+    action hit(PortId_t port, QueueId_t qid, bit<3> ingress_cos) {
+        ig_intr_tm_md.ucast_egress_port = port;
+        ig_intr_tm_md.qid = qid;
+        ig_intr_tm_md.ingress_cos = ingress_cos;
+    }
+
+    action miss() {
+        ig_intr_dprsr_md.drop_ctl = 0x1; // Drop packet.
+    }
+
+    table forward {
+        key = {
+            hdr.ipv4.dst_addr : ternary;
+            ig_intr_md.ingress_port : ternary;
+        }
+        actions = {
+            hit;
+            miss;
+        }
+        const default_action = miss;
+        size = 64;
+    }
+
+    action reply_arp(mac_addr_t reply_mac, bit<32> reply_ip){
+        hdr.arp.dstMacAddr = hdr.arp.srcMacAddr;
+        hdr.arp.dstIPAddr = hdr.arp.srcIPAddr;
+        hdr.arp.srcMacAddr = reply_mac;
+        hdr.arp.srcIPAddr = reply_ip;
+        hdr.arp.opcode = 16w2;
+
+        hdr.ethernet.dst_addr = hdr.ethernet.src_addr;
+        hdr.ethernet.src_addr = reply_mac;
+        ig_intr_tm_md.ucast_egress_port = ig_intr_md.ingress_port;
+    }
+
+    table arp_proxy {
+        key = {
+            hdr.arp.dstIPAddr : exact;
+        }
+        actions = {
+            reply_arp;
+            @defaultonly miss;
+        }
+        size = 64;
+        const default_action = miss;
+        const entries = {
+            32w0xAC106401: reply_arp(48w0xec0d9abfdf75, 0xAC106401);
+			// 32w0xAC106402: reply_arp(48w0xec0d9abfdd0d, 0xAC106402);
+            32w0xAC106402: reply_arp(48w0xec0d9aa418ff, 0xAC106402);
+            // Note that the 172.16.100.7 is the 609-3
+            // We exchange the MAC here
+            // 32w0xAC106403: reply_arp(48w0xec0d9abfdcb5, 0xAC106403);
+			// 32w0xAC106407: reply_arp(48w0xec0d9abfdcbd, 0xAC106407);
+            32w0xAC106403: reply_arp(48w0xec0d9abfdcbd, 0xAC106403);
+			32w0xAC106407: reply_arp(48w0xec0d9abfdcb5, 0xAC106407);
+			32w0xAC10640A: reply_arp(48w0xec0d9aa4190f, 0xAC10640A);
+            32w0xAC106414: reply_arp(48w0x043f72c060e6, 0xAC106414);
+		}
+    }
+
+    apply {
+        if (hdr.arp.isValid()){
+            arp_proxy.apply();
+        }
+        if (hdr.ipv4.isValid()) {
+            forward.apply();
+        }        
+        // No need for egress processing, skip it and use empty controls for egress.
+        // ig_intr_tm_md.bypass_egress = 1w1;
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Ingress Deparser
 // ---------------------------------------------------------------------------
 control SwitchIngressDeparser(
         packet_out pkt,
-        inout header_t hdr,
-        in metadata_t ig_md,
+        inout headers_t hdr,
+        in ingress_metadata_t ig_md,
         in ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md) {
 
     apply {
@@ -78,114 +181,107 @@ control SwitchIngressDeparser(
     }
 }
 
-control SwitchIngress(
-        inout header_t hdr,
-        inout metadata_t ig_md,
-        in ingress_intrinsic_metadata_t ig_intr_md,
-        in ingress_intrinsic_metadata_from_parser_t ig_intr_prsr_md,
-        inout ingress_intrinsic_metadata_for_deparser_t ig_intr_dprsr_md,
-        inout ingress_intrinsic_metadata_for_tm_t ig_intr_tm_md) {
+// ---------------------------------------------------------------------------
+// Egress parser
+// ---------------------------------------------------------------------------
+parser SwitchEgressParser(
+        packet_in pkt,
+        out headers_t hdr,
+        out egress_metadata_t eg_md,
+        out egress_intrinsic_metadata_t eg_intr_md) {
 
-    // Create indirect counter
-    Counter<bit<32>, PortId_t>(
-        512, CounterType_t.PACKETS_AND_BYTES) indirect_counter;
+    TofinoEgressParser() tofino_parser; 
 
-    // Create direct counters
-    DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) direct_counter;
-    DirectCounter<bit<32>>(CounterType_t.PACKETS_AND_BYTES) direct_counter_2;
-
-    action hit(PortId_t port) {
-        // Call direct counter. Note that no index parameter is required because
-        // the index is implicitely generated from the entry of the the 
-        // associated match table.
-        direct_counter.count();
-        ig_intr_tm_md.ucast_egress_port = port;
+    state start {
+        tofino_parser.apply(pkt, eg_intr_md);
+        transition parse_ethernet;
     }
 
-    action hit_dst(PortId_t port) {
-        // Call indirect counter. Note that for indirect counters an index 
-        // parameter must be provided.
-        indirect_counter.count(port);
-        ig_intr_tm_md.ucast_egress_port = port;
-        ig_intr_dprsr_md.drop_ctl = 0x0; // clear drop packet
+    state parse_ethernet {
+        pkt.extract(hdr.ethernet);
+        transition select(hdr.ethernet.ether_type){
+            ETHERTYPE_IPV4: parse_ipv4;
+			ETHERTYPE_ARP: parse_arp;
+            default: reject;
+        }
     }
 
-    action miss() {
-        ig_intr_dprsr_md.drop_ctl = 0x1; // Drop packet.
-    }
-    action nop() {
+    state parse_ipv4 {
+        pkt.extract(hdr.ipv4);
+        transition parse_tcp;
     }
 
-    table forward {
+    state parse_tcp {
+        pkt.extract(hdr.tcp);
+        transition accept;
+    }
+
+    state parse_arp {
+		pkt.extract(hdr.arp);
+		transition accept;
+	}
+}
+
+control SwitchEgress(
+        inout headers_t hdr,
+        inout egress_metadata_t eg_md,
+        in    egress_intrinsic_metadata_t                 eg_intr_md,
+        in    egress_intrinsic_metadata_from_parser_t     eg_prsr_md,
+        inout egress_intrinsic_metadata_for_deparser_t    eg_dprsr_md,
+        inout egress_intrinsic_metadata_for_output_port_t eg_oport_md) {
+
+    DirectRegister<bit<32>>() reg_max_queue_length;
+    DirectRegisterAction<bit<32>, bit<32>>(reg_max_queue_length) regact_max_queue_length_set = {
+        void apply(inout bit<32> val, out bit<32> read_value) {
+            if (eg_intr_md.deq_qdepth > (bit<19>)val){
+                val = (bit<32>)eg_intr_md.deq_qdepth;
+            }
+            read_value = val;
+        }
+    };
+    action act_max_queue_length_set() {
+        regact_max_queue_length_set.execute();
+    }
+    
+    table tbl_max_queue_length {
         key = {
-            hdr.ethernet.src_addr : ternary;
+            eg_intr_md.egress_port : exact;
+            eg_intr_md.egress_qid : exact;
         }
-
         actions = {
-            hit;
-            @defaultonly nop;
+            act_max_queue_length_set;
         }
-
-        size = 1024;
-        const default_action = nop;
-        // Associate this table with a direct counter
-        counters = direct_counter;
+        size = 1024;      
+        registers = reg_max_queue_length;
     }
 
-    action hit_forward_exact(PortId_t port) {
-        // Call direct counter. Note that no index parameter is required because
-        // the index is implicitely generated from the entry of the the 
-        // associated match table.
-        direct_counter_2.count();
-        ig_intr_tm_md.ucast_egress_port = port;
+    apply{
+        tbl_max_queue_length.apply();
     }
+}
 
-    table forward_exact {
-        key = {
-            hdr.ethernet.src_addr : exact;
-        }
 
-        actions = {
-            hit_forward_exact;
-            @defaultonly nop;
-        }
+// ---------------------------------------------------------------------------
+// Egress Deparser
+// ---------------------------------------------------------------------------
+control SwitchEgressDeparser(
+        packet_out pkt,
+        inout headers_t hdr,
+        in egress_metadata_t eg_md,
+        in egress_intrinsic_metadata_for_deparser_t eg_dprsr_md) {
 
-        size = 1024;
-        const default_action = nop;
-        // Associate this table with a direct counter
-        counters = direct_counter_2;
-    }
-
-    table forward_dst {
-        key = {
-            hdr.ethernet.dst_addr : exact;
-        }
-
-        actions = {
-            hit_dst;
-            @defaultonly nop;
-        }
-
-        const default_action = nop;
-        size = 1024;
-        // No association a counter required, since an indirect counter is used.
-    }
+    Mirror() mirror;
 
     apply {
-        forward.apply();
-        forward_exact.apply();
-        forward_dst.apply();
-
-        // No need for egress processing, skip it and use empty controls for egress.
-        ig_intr_tm_md.bypass_egress = 1w1;
+        pkt.emit(hdr);
     }
 }
 
 Pipeline(SwitchIngressParser(),
          SwitchIngress(),
          SwitchIngressDeparser(),
-         EmptyEgressParser(),
-         EmptyEgress(),
-         EmptyEgressDeparser()) pipe;
+         SwitchEgressParser(),
+         SwitchEgress(),
+         SwitchEgressDeparser()) pipe;
 
 Switch(pipe) main;
