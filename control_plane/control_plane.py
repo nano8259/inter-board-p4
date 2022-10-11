@@ -40,7 +40,7 @@ QLENGTH_CELL = 1200
 
 
 class Port:
-    def __init__(self, name, dp, speed="100G", fec="BF_FEC_TYP_NONE", peer_addr = None):
+    def __init__(self, name, dp, speed="100G", fec="BF_FEC_TYP_NONE", peer_addr = None, peer_mac = None):
         if speed in ["100G", "400G"]:
             # if the port rate is 100G or 400G, the FEC should be RS
             fec = "BF_FEC_TYP_RS"
@@ -57,6 +57,7 @@ class Port:
         self.fec = fec
         # the ip addr of host which the port is connected to 
         self.peer_addr = peer_addr
+        self.peer_mac = peer_mac
 
 g_is_tofino = testutils.test_param_get("arch") == "tofino"
 g_is_tofino2 = testutils.test_param_get("arch") == "tofino2"
@@ -68,18 +69,19 @@ class Controller(BfRuntimeTest):
         self.p4_name = p4_name
         
         self.ports = []
-        self.ports.append(Port("1/0", 392, "100G", "BF_FEC_TYP_RS", "172.16.100.1"))
-        self.ports.append(Port("2/0", 400, "100G", "BF_FEC_TYP_RS", "172.16.100.2"))
-        self.ports.append(Port("9/0", 64, "100G", "BF_FEC_TYP_RS", "172.16.100.3"))
-        self.ports.append(Port("10/0", 56, "100G", "BF_FEC_TYP_RS", "172.16.100.7"))
-        self.ports.append(Port("17/0", 136, "100G", "BF_FEC_TYP_RS", "172.16.100.10"))
-        self.ports.append(Port("18/0", 144, "100G", "BF_FEC_TYP_RS", "172.16.100.20"))
+        self.ports.append(Port("1/0", 392, "10G", "BF_FEC_TYP_NONE", "172.16.100.2", 0xec0d9abfdf75))
+        self.ports.append(Port("2/0", 400, "10G", "BF_FEC_TYP_NONE", "172.16.100.12", 0xec0d9aa418ff))
+        self.ports.append(Port("9/0", 64, "10G", "BF_FEC_TYP_NONE", "172.16.100.14", 0xec0d9abfdcbd))
+        self.ports.append(Port("10/0", 56, "10G", "BF_FEC_TYP_NONE", "172.16.100.6", 0xec0d9abfdcb5))
+        self.ports.append(Port("11/0", 48, "10G", "BF_FEC_TYP_NONE", "172.16.100.13", 0x043f72c0639e))
+        self.ports.append(Port("12/0", 40, "10G", "BF_FEC_TYP_NONE", "172.16.100.14", 0x043f72c0656e))
+        self.ports.append(Port("13/0", 32, "10G", "BF_FEC_TYP_NONE", "172.16.100.15", 0xec0d9abfd92c))
+        self.ports.append(Port("17/0", 136, "10G", "BF_FEC_TYP_NONE", "172.16.100.19", 0xec0d9aa4190f))
+        self.ports.append(Port("18/0", 144, "10G", "BF_FEC_TYP_NONE", "172.16.100.20", 0x043f72c060e6))
         
         self.inner_ports = []
-        inner_ports = [424, 32, 168, 312, 320, 296] \
-                    + [432, 24, 176, 288, 280, 264]
-        for ip in inner_ports:
-            self.inner_ports.append(Port("0/0", ip, "100G", "BF_FEC_TYP_RS", "0.0.0.0"))
+        for lp in [312, 320, 296, 304, 288, 280]:
+            self.inner_ports.append(Port("0/0", lp, "10G", "BF_FEC_TYP_NONE", "0.0.0.0"))
         
     
     def setUp(self):
@@ -177,169 +179,138 @@ class Controller(BfRuntimeTest):
         
     def setup_l3_forward(self):
         forward_table = self.bfrt_info.table_get("SwitchIngress.forward")
+        arp_table = self.bfrt_info.table_get("SwitchIngress.arp_proxy")
         forward_table.info.key_field_annotation_add("hdr.ipv4.dst_addr", "ipv4")
-        # for p in self.ports:
-        #     self.safe_entry_add(
-        #         forward_table,
-        #     # forward_table.entry_add(
-        #         self.target,
-        #         [forward_table.make_key([gc.KeyTuple('$MATCH_PRIORITY', 10),
-        #                                  gc.KeyTuple('hdr.ipv4.dst_addr', p.peer_addr, 0xFFFF),
-        #                                  gc.KeyTuple('ig_intr_md.ingress_port', 0, 0)])],
-        #         [forward_table.make_data([gc.DataTuple('port', p.dp),
-        #                                   gc.DataTuple('qid', OQ_QID),
-        #                                   gc.DataTuple('ingress_cos', 0)],
-        #                                   'SwitchIngress.hit')])
-        # spine leaf topology
-        spine_pipeline = {
-            'pipe_id': 2,
-            'ports_low': [312, 320, 296],
-            'ports_high': [288, 280, 264]
-        }
-        leaf_pipelines =[
-            {
-                'pipe_id': 3,
-                'uplink_port_low': 424,
-                'uplink_port_high': 432,
-                'downlink_ports': self.ports[0:2]
-            },
-            {
-                'pipe_id': 0,
-                'uplink_port_low': 32,
-                'uplink_port_high': 24,
-                'downlink_ports': self.ports[2:4]
-            },
-            {
-                'pipe_id': 1,
-                'uplink_port_low': 168,
-                'uplink_port_high': 176,
-                'downlink_ports': self.ports[4:6]
-            }
-        ]
+        arp_table.info.key_field_annotation_add("hdr.arp.dstIPAddr", "ipv4")
+        arp_table.info.data_field_annotation_add("reply_ip", "SwitchIngress.reply_arp", "ipv4")
         
-        for i in range(len(leaf_pipelines)):
-            # leaf to spine (low)
+        # 
+        mpu_port = self.ports[0]
+        lpu_port = self.ports[1:]
+        lsw0_port = {
+            'up_port': mpu_port,
+            'down_port': self.inner_ports[0]
+        }
+        lsw1_port = {
+            'up_port': self.inner_ports[1],
+            'down_port': [self.inner_ports[2],
+                          self.inner_ports[4]]
+        }
+        lsw2_port = {
+            'up_port': self.inner_ports[3],
+            'down_port': lpu_port[:4]
+        }
+        lsw3_port = {
+            'up_port': self.inner_ports[5],
+            'down_port': lpu_port[4:]
+        }
+        
+        # route for lpu->mpu
+        routes_lpu = [
+            # the first hop
+            {
+                'ig_port': p,
+                'eg_port': lsw2_port['up_port']
+            } for p in lsw2_port['down_port']
+        ] + [
+            {
+                'ig_port': p,
+                'eg_port': lsw3_port['up_port']
+            } for p in lsw3_port['down_port']
+        ] + [
+            # the second hop
+            {
+                'ig_port': p,
+                'eg_port': lsw1_port['up_port']
+            } for p in lsw1_port['down_port']
+        ] + [
+            # the third hop
+            {
+                'ig_port': lsw0_port['down_port'],
+                'eg_port': lsw0_port['up_port']
+            }
+        ]
+        for r in routes_lpu:
             self.safe_entry_add(
                 forward_table,
                 self.target,
-                [forward_table.make_key([gc.KeyTuple('$MATCH_PRIORITY', 5),
-                                        gc.KeyTuple('hdr.ipv4.dst_addr', 0, 0),
-                                        gc.KeyTuple('ig_intr_md.ingress_port', leaf_pipelines[i]['pipe_id']<<7, 0x180)])],
-                [forward_table.make_data([gc.DataTuple('port', leaf_pipelines[i]['uplink_port_low']),
+                [forward_table.make_key([gc.KeyTuple('$MATCH_PRIORITY', 10),
+                                        gc.KeyTuple('hdr.ipv4.dst_addr', mpu_port.peer_addr, 0xFFFF),
+                                        gc.KeyTuple('ig_intr_md.ingress_port', r['ig_port'].dp, 0x1FF)])],
+                [forward_table.make_data([gc.DataTuple('port', r['eg_port'].dp),
+                                        gc.DataTuple('qid', OQ_QID),
+                                        gc.DataTuple('ingress_cos', 0)],
+                                        'SwitchIngress.hit')])
+        
+        # route for mpu->lpu
+        # for simplity, we use other addr in forword
+        routes_mpu = [
+            # the first hop
+            {
+                'dst_addr': (0, 0),  # value and mask
+                'ig_port': lsw0_port['up_port'],
+                'eg_port': lsw0_port['down_port']
+            }
+        ] + [
+            # the second hop
+            {
+                'dst_addr': (p.peer_addr, 0x1FF),
+                'ig_port': lsw1_port['up_port'],
+                'eg_port': lsw1_port['down_port'][0]  # forward to lsw2
+            } for p in lsw2_port['down_port']
+        ] + [
+            {
+                'dst_addr': (p.peer_addr, 0x1FF),
+                'ig_port': lsw1_port['up_port'],
+                'eg_port': lsw1_port['down_port'][1]  # forward to lsw3
+            } for p in lsw3_port['down_port']
+        ] + [
+            {
+                'dst_addr': (p.peer_addr, 0x1FF),
+                'ig_port': lsw2_port['up_port'],
+                'eg_port': p  # forward hosts
+            } for p in lsw2_port['down_port']
+        ] + [
+            {
+                'dst_addr': (p.peer_addr, 0x1FF),
+                'ig_port': lsw3_port['up_port'],
+                'eg_port': p  # forward hosts
+            } for p in lsw3_port['down_port']
+        ]
+        for r in routes_mpu:
+            self.safe_entry_add(
+                forward_table,
+                self.target,
+                [forward_table.make_key([gc.KeyTuple('$MATCH_PRIORITY', 20),
+                                        gc.KeyTuple('hdr.ipv4.dst_addr', r['dst_addr'][0], r['dst_addr'][1]),
+                                        gc.KeyTuple('ig_intr_md.ingress_port', r['ig_port'].dp, 0x1FF)])],
+                [forward_table.make_data([gc.DataTuple('port', r['eg_port'].dp),
                                         gc.DataTuple('qid', OQ_QID),
                                         gc.DataTuple('ingress_cos', 0)],
                                         'SwitchIngress.hit')])
             
-            for p in leaf_pipelines[i]['downlink_ports']:
-                # leaf to itself
-                self.safe_entry_add(
-                    forward_table,
-                    self.target,
-                    [forward_table.make_key([gc.KeyTuple('$MATCH_PRIORITY', 1),
-                                            gc.KeyTuple('hdr.ipv4.dst_addr', p.peer_addr, 0xFFFFFFFF),
-                                            gc.KeyTuple('ig_intr_md.ingress_port', leaf_pipelines[i]['pipe_id']<<7, 0x180)])],
-                    [forward_table.make_data([gc.DataTuple('port', p.dp),
-                                            gc.DataTuple('qid', OQ_QID),
-                                            gc.DataTuple('ingress_cos', 0)],
-                                            'SwitchIngress.hit')])
-                # spine to leaf (low)
-                self.safe_entry_add(
-                    forward_table, 
-                    self.target,
-                    [forward_table.make_key([gc.KeyTuple('$MATCH_PRIORITY', 5),
-                                            gc.KeyTuple('hdr.ipv4.dst_addr', p.peer_addr, 0xFFFFFFFF),
-                                            gc.KeyTuple('ig_intr_md.ingress_port', port_low, 0x1FF)])
-                                            for port_low in spine_pipeline['ports_low']],
-                    [forward_table.make_data([gc.DataTuple('port', spine_pipeline['ports_low'][i]),
-                                            gc.DataTuple('qid', OQ_QID),
-                                            gc.DataTuple('ingress_cos', 0)],
-                                            'SwitchIngress.hit')
-                                            for port_low in spine_pipeline['ports_low']])
-                # spine to leaf (high)
-                self.safe_entry_add(
-                    forward_table, 
-                    self.target,
-                    [forward_table.make_key([gc.KeyTuple('$MATCH_PRIORITY', 5),
-                                            gc.KeyTuple('hdr.ipv4.dst_addr', p.peer_addr, 0xFFFFFFFF),
-                                            gc.KeyTuple('ig_intr_md.ingress_port', port_high, 0x1FF)])
-                                            for port_high in spine_pipeline['ports_high']],
-                    [forward_table.make_data([gc.DataTuple('port', spine_pipeline['ports_high'][i]),
-                                            gc.DataTuple('qid', OQ_QID),
-                                            gc.DataTuple('ingress_cos', 0)],
-                                            'SwitchIngress.hit')
-                                            for port_high in spine_pipeline['ports_high']])
+        # default route to every host
+        for p in self.ports:
+            self.safe_entry_add(
+                forward_table,
+                self.target,
+                [forward_table.make_key([gc.KeyTuple('$MATCH_PRIORITY', 30),
+                                        gc.KeyTuple('hdr.ipv4.dst_addr', p.peer_addr, 0xFFFF),
+                                        gc.KeyTuple('ig_intr_md.ingress_port', 0, 0)])],
+                [forward_table.make_data([gc.DataTuple('port', p.dp),
+                                        gc.DataTuple('qid', OQ_QID),
+                                        gc.DataTuple('ingress_cos', 0)],
+                                        'SwitchIngress.hit')])
             
-        # Specify the route of specific flows
-        # We only need to specify the first hop
-        flows = [
-            {
-                'ingress_port': 392,
-                'dst_addr': 0xAC10640A,
-                'egress_port': 432
-            },
-            {
-                'ingress_port': 400,
-                'dst_addr': 0xAC10640A,
-                'egress_port': 424
-            },
-            {
-                'ingress_port': 64,
-                'dst_addr': 0xAC10640A,
-                'egress_port': 24
-            },
-            # victim flow
-            {
-                'ingress_port': 56,
-                'dst_addr': 0xAC106414,
-                'egress_port': 32
-            }
-        ]
-        # the flows data pkts should go the same way with its ack pkts
-        reverse_flows = [
-            {
-                'ingress_port': 136,
-                'dst_addr': 0xAC106401,
-                'egress_port': 176
-            },
-            {
-                'ingress_port': 136,
-                'dst_addr': 0xAC106402,
-                'egress_port': 168
-            },
-            {
-                'ingress_port': 136,
-                'dst_addr': 0xAC106403,
-                'egress_port': 176
-            },
-            # victim flow
-            {
-                'ingress_port': 144,
-                'dst_addr': 0xAC106407,
-                'egress_port': 168
-            }
-        ]
-        for f in flows:
+        # ARP table
+        for p in self.ports:
             self.safe_entry_add(
-                forward_table,
+                arp_table,
                 self.target,
-                [forward_table.make_key([gc.KeyTuple('$MATCH_PRIORITY', 1),
-                                        gc.KeyTuple('hdr.ipv4.dst_addr', f['dst_addr'], 0xFFFFFFFF),
-                                        gc.KeyTuple('ig_intr_md.ingress_port', f['ingress_port'], 0x1FF)])],
-                [forward_table.make_data([gc.DataTuple('port', f['egress_port']),
-                                        gc.DataTuple('qid', OQ_QID),
-                                        gc.DataTuple('ingress_cos', 0)],
-                                        'SwitchIngress.hit')])
-        for f in reverse_flows:
-            self.safe_entry_add(
-                forward_table,
-                self.target,
-                [forward_table.make_key([gc.KeyTuple('$MATCH_PRIORITY', 1),
-                                        gc.KeyTuple('hdr.ipv4.dst_addr', f['dst_addr'], 0xFFFFFFFF),
-                                        gc.KeyTuple('ig_intr_md.ingress_port', f['ingress_port'], 0x1FF)])],
-                [forward_table.make_data([gc.DataTuple('port', f['egress_port']),
-                                        gc.DataTuple('qid', OQ_QID),
-                                        gc.DataTuple('ingress_cos', 0)],
-                                        'SwitchIngress.hit')])
+                [arp_table.make_key([gc.KeyTuple('hdr.arp.dstIPAddr', p.peer_addr)])],
+                [arp_table.make_data([gc.DataTuple('reply_mac', p.peer_mac),
+                                      gc.DataTuple('reply_ip', p.peer_addr)],
+                                     'SwitchIngress.reply_arp')])
             
     def setup_max_qlenth(self):
         tbl_max_queue_length = self.bfrt_info.table_get("SwitchEgress.tbl_max_queue_length")

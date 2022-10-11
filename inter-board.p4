@@ -35,6 +35,7 @@ struct headers_t {
     arp_h arp;
     ipv4_h ipv4;
     tcp_h tcp;
+    udp_h udp;
 }
 
 struct ingress_metadata_t {}
@@ -68,11 +69,25 @@ parser SwitchIngressParser(
 
     state parse_ipv4 {
         pkt.extract(hdr.ipv4);
-        transition parse_tcp;
+        transition select(hdr.ipv4.protocol){
+            IP_PROTOCOLS_ICMP : parse_icmp;
+            IP_PROTOCOLS_TCP: parse_tcp;
+			IP_PROTOCOLS_UDP: parse_udp;
+            default: reject;
+        }
     }
 
     state parse_tcp {
         pkt.extract(hdr.tcp);
+        transition accept;
+    }
+
+    state parse_udp {
+        pkt.extract(hdr.udp);
+        transition accept;
+    }
+    
+    state parse_icmp {
         transition accept;
     }
 
@@ -115,7 +130,7 @@ control SwitchIngress(
             miss;
         }
         const default_action = miss;
-        size = 64;
+        size = 1024;
     }
 
     action reply_arp(mac_addr_t reply_mac, bit<32> reply_ip){
@@ -140,19 +155,28 @@ control SwitchIngress(
         }
         size = 64;
         const default_action = miss;
-        const entries = {
-            32w0xAC106401: reply_arp(48w0xec0d9abfdf75, 0xAC106401);
-			// 32w0xAC106402: reply_arp(48w0xec0d9abfdd0d, 0xAC106402);
-            32w0xAC106402: reply_arp(48w0xec0d9aa418ff, 0xAC106402);
-            // Note that the 172.16.100.7 is the 609-3
-            // We exchange the MAC here
-            // 32w0xAC106403: reply_arp(48w0xec0d9abfdcb5, 0xAC106403);
-			// 32w0xAC106407: reply_arp(48w0xec0d9abfdcbd, 0xAC106407);
-            32w0xAC106403: reply_arp(48w0xec0d9abfdcbd, 0xAC106403);
-			32w0xAC106407: reply_arp(48w0xec0d9abfdcb5, 0xAC106407);
-			32w0xAC10640A: reply_arp(48w0xec0d9aa4190f, 0xAC10640A);
-            32w0xAC106414: reply_arp(48w0x043f72c060e6, 0xAC106414);
-		}
+    }
+
+    DirectRegister<bit<32>>() reg_ig_packet_count;
+    DirectRegisterAction<bit<32>, bit<32>>(reg_ig_packet_count) regact_ig_packet_count_inc = {
+        void apply(inout bit<32> val) {
+            val = val + 1;
+        }
+    };
+    action act_ig_packet_count_inc() {
+        regact_ig_packet_count_inc.execute();
+    }
+    
+    table tbl_ig_packet_count {
+        key = {
+            ig_intr_md.ingress_port : exact;
+            hdr.ipv4.dst_addr : exact;
+        }
+        actions = {
+            act_ig_packet_count_inc;
+        }
+        size = 1024;      
+        registers = reg_ig_packet_count;
     }
 
     apply {
@@ -161,9 +185,10 @@ control SwitchIngress(
         }
         if (hdr.ipv4.isValid()) {
             forward.apply();
-        }        
-        // No need for egress processing, skip it and use empty controls for egress.
-        // ig_intr_tm_md.bypass_egress = 1w1;
+        }
+        if (hdr.udp.isValid()){
+            tbl_ig_packet_count.apply();
+        }
     }
 }
 
@@ -208,11 +233,25 @@ parser SwitchEgressParser(
 
     state parse_ipv4 {
         pkt.extract(hdr.ipv4);
-        transition parse_tcp;
+        transition select(hdr.ipv4.protocol){
+            IP_PROTOCOLS_ICMP : parse_icmp;
+            IP_PROTOCOLS_TCP: parse_tcp;
+			IP_PROTOCOLS_UDP: parse_udp;
+            default: reject;
+        }
     }
 
     state parse_tcp {
         pkt.extract(hdr.tcp);
+        transition accept;
+    }
+
+    state parse_udp {
+        pkt.extract(hdr.udp);
+        transition accept;
+    }
+    
+    state parse_icmp {
         transition accept;
     }
 
@@ -255,8 +294,31 @@ control SwitchEgress(
         registers = reg_max_queue_length;
     }
 
+    DirectRegister<bit<32>>() reg_eg_packet_count;
+    DirectRegisterAction<bit<32>, bit<32>>(reg_eg_packet_count) regact_eg_packet_count_inc = {
+        void apply(inout bit<32> val) {
+            val = val + 1;
+        }
+    };
+    action act_eg_packet_count_inc() {
+        regact_eg_packet_count_inc.execute();
+    }
+    
+    table tbl_eg_packet_count {
+        key = {
+            eg_intr_md.egress_port : exact;
+            hdr.ipv4.dst_addr : exact;
+        }
+        actions = {
+            act_eg_packet_count_inc;
+        }
+        size = 1024;
+        registers = reg_eg_packet_count;
+    }
+
     apply{
         tbl_max_queue_length.apply();
+        tbl_eg_packet_count.apply();
     }
 }
 
