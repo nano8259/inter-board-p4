@@ -105,6 +105,7 @@ class Controller(BfRuntimeTest):
         self.setup_ports()        
         self.setup_l3_forward()
         self.setup_max_qlenth()
+        self.setup_packet_count()
         
     def runTest(self):
         print("runTest")
@@ -185,10 +186,10 @@ class Controller(BfRuntimeTest):
         arp_table.info.data_field_annotation_add("reply_ip", "SwitchIngress.reply_arp", "ipv4")
         
         # 
-        mpu_port = self.ports[0]
-        lpu_port = self.ports[1:]
+        self.mpu_port = self.ports[0]
+        self.lpu_port = self.ports[1:]
         lsw0_port = {
-            'up_port': mpu_port,
+            'up_port': self.mpu_port,
             'down_port': self.inner_ports[0]
         }
         lsw1_port = {
@@ -198,11 +199,11 @@ class Controller(BfRuntimeTest):
         }
         lsw2_port = {
             'up_port': self.inner_ports[3],
-            'down_port': lpu_port[:4]
+            'down_port': self.lpu_port[:4]
         }
         lsw3_port = {
             'up_port': self.inner_ports[5],
-            'down_port': lpu_port[4:]
+            'down_port': self.lpu_port[4:]
         }
         
         # route for lpu->mpu
@@ -235,7 +236,7 @@ class Controller(BfRuntimeTest):
                 forward_table,
                 self.target,
                 [forward_table.make_key([gc.KeyTuple('$MATCH_PRIORITY', 10),
-                                        gc.KeyTuple('hdr.ipv4.dst_addr', mpu_port.peer_addr, 0xFFFF),
+                                        gc.KeyTuple('hdr.ipv4.dst_addr', self.mpu_port.peer_addr, 0xFFFF),
                                         gc.KeyTuple('ig_intr_md.ingress_port', r['ig_port'].dp, 0x1FF)])],
                 [forward_table.make_data([gc.DataTuple('port', r['eg_port'].dp),
                                         gc.DataTuple('qid', OQ_QID),
@@ -323,6 +324,50 @@ class Controller(BfRuntimeTest):
                                                 gc.KeyTuple('eg_intr_md.egress_qid', q)])],
                     [tbl_max_queue_length.make_data([gc.DataTuple('SwitchEgress.reg_max_queue_length.f1', 0)],
                                                 'SwitchEgress.act_max_queue_length_set')])
+                
+    def setup_packet_count(self):
+        ig_tbl_packet_count = self.bfrt_info.table_get("SwitchIngress.tbl_ig_packet_count")
+        eg_tbl_packet_count = self.bfrt_info.table_get("SwitchEgress.tbl_eg_packet_count")
+        ig_tbl_packet_count.info.key_field_annotation_add("hdr.ipv4.src_addr", "ipv4")
+        ig_tbl_packet_count.info.key_field_annotation_add("hdr.ipv4.dst_addr", "ipv4")
+        eg_tbl_packet_count.info.key_field_annotation_add("hdr.ipv4.src_addr", "ipv4")
+        eg_tbl_packet_count.info.key_field_annotation_add("hdr.ipv4.dst_addr", "ipv4")
+        for p in self.ports + self.inner_ports:
+            for lp in self.lpu_port:
+                # flows form mpu to lpus
+                self.safe_entry_add(
+                    ig_tbl_packet_count,
+                    self.target,
+                    [ig_tbl_packet_count.make_key([gc.KeyTuple('ig_intr_md.ingress_port', p.dp),
+                                                   gc.KeyTuple('hdr.ipv4.src_addr', self.mpu_port.peer_addr),
+                                                   gc.KeyTuple('hdr.ipv4.dst_addr', lp.peer_addr)])],
+                    [ig_tbl_packet_count.make_data([gc.DataTuple('SwitchIngress.reg_ig_packet_count.f1', 0)],
+                                                   'SwitchIngress.act_ig_packet_count_inc')])
+                self.safe_entry_add(
+                    eg_tbl_packet_count,
+                    self.target,
+                    [eg_tbl_packet_count.make_key([gc.KeyTuple('eg_intr_md.egress_port', p.dp),
+                                                   gc.KeyTuple('hdr.ipv4.src_addr', self.mpu_port.peer_addr),
+                                                   gc.KeyTuple('hdr.ipv4.dst_addr', lp.peer_addr)])],
+                    [eg_tbl_packet_count.make_data([gc.DataTuple('SwitchEgress.reg_eg_packet_count.f1', 0)],
+                                                   'SwitchEgress.act_eg_packet_count_inc')])
+                # flows form lpus to mpu
+                self.safe_entry_add(
+                    ig_tbl_packet_count,
+                    self.target,
+                    [ig_tbl_packet_count.make_key([gc.KeyTuple('ig_intr_md.ingress_port', p.dp),
+                                                   gc.KeyTuple('hdr.ipv4.src_addr', lp.peer_addr),
+                                                   gc.KeyTuple('hdr.ipv4.dst_addr', self.mpu_port.peer_addr)])],
+                    [ig_tbl_packet_count.make_data([gc.DataTuple('SwitchIngress.reg_ig_packet_count.f1', 0)],
+                                                   'SwitchIngress.act_ig_packet_count_inc')])
+                self.safe_entry_add(
+                    eg_tbl_packet_count,
+                    self.target,
+                    [eg_tbl_packet_count.make_key([gc.KeyTuple('eg_intr_md.egress_port', p.dp),
+                                                   gc.KeyTuple('hdr.ipv4.src_addr', lp.peer_addr),
+                                                   gc.KeyTuple('hdr.ipv4.dst_addr', self.mpu_port.peer_addr)])],
+                    [eg_tbl_packet_count.make_data([gc.DataTuple('SwitchEgress.reg_eg_packet_count.f1', 0)],
+                                                   'SwitchEgress.act_eg_packet_count_inc')])
         
 # Type transformation functions
 def make_port(pipe, local_port):

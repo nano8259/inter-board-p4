@@ -170,12 +170,13 @@ control SwitchIngress(
     table tbl_ig_packet_count {
         key = {
             ig_intr_md.ingress_port : exact;
+            hdr.ipv4.src_addr : exact;
             hdr.ipv4.dst_addr : exact;
         }
         actions = {
             act_ig_packet_count_inc;
         }
-        size = 1024;      
+        size = 4096;      
         registers = reg_ig_packet_count;
     }
 
@@ -307,18 +308,21 @@ control SwitchEgress(
     table tbl_eg_packet_count {
         key = {
             eg_intr_md.egress_port : exact;
+            hdr.ipv4.src_addr : exact;
             hdr.ipv4.dst_addr : exact;
         }
         actions = {
             act_eg_packet_count_inc;
         }
-        size = 1024;
+        size = 4096;
         registers = reg_eg_packet_count;
     }
 
     apply{
         tbl_max_queue_length.apply();
-        tbl_eg_packet_count.apply();
+        if (hdr.udp.isValid()){
+            tbl_ig_packet_count.apply();
+        }
     }
 }
 
