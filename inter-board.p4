@@ -40,7 +40,10 @@ struct headers_t {
 
 struct ingress_metadata_t {}
 
-struct egress_metadata_t {}
+struct egress_metadata_t {
+    bit<16> rand_num;
+    bool is_drop;
+}
 
 // ---------------------------------------------------------------------------
 // Ingress parser
@@ -304,7 +307,6 @@ control SwitchEgress(
     action act_eg_packet_count_inc() {
         regact_eg_packet_count_inc.execute();
     }
-    
     table tbl_eg_packet_count {
         key = {
             eg_intr_md.egress_port : exact;
@@ -318,10 +320,60 @@ control SwitchEgress(
         registers = reg_eg_packet_count;
     }
 
+    // define 16b random number generator
+    // if 32b, cannot perform a range match on key which does not fit in under 5 PHV nibbles
+    Random<bit<16>>() rnd1;
+    action set_is_drop(){
+        eg_md.is_drop = true;
+    }
+    action set_not_drop(){
+        eg_md.is_drop = false;
+    }
+    table tbl_drop_determine {
+        key = {
+            eg_md.rand_num : range;
+        }
+        actions = {
+            set_is_drop;
+            set_not_drop;
+        }
+        const default_action = set_not_drop();
+        size = 1024;
+    }
+    
+    DirectRegister<bit<32>>() reg_random_drop_count;
+    DirectRegisterAction<bit<32>, bit<32>>(reg_random_drop_count) regact_random_drop_count_inc = {
+        void apply(inout bit<32> val) {
+            val = val + 1;
+        }
+    };
+    action act_random_drop_count_inc() {
+        regact_random_drop_count_inc.execute();
+    }
+    table tbl_random_drop_count {
+        key = {
+            eg_intr_md.egress_port : exact;
+            hdr.ipv4.src_addr : exact;
+            hdr.ipv4.dst_addr : exact;
+        }
+        actions = {
+            act_random_drop_count_inc;
+        }
+        size = 4096;
+        registers = reg_random_drop_count;
+    }
+
     apply{
         tbl_max_queue_length.apply();
         if (hdr.udp.isValid()){
-            tbl_ig_packet_count.apply();
+            tbl_eg_packet_count.apply();
+            // random drop
+            eg_md.rand_num = rnd1.get();
+            tbl_drop_determine.apply();
+            if (eg_md.is_drop){
+                eg_dprsr_md.drop_ctl = 0x1;
+                tbl_random_drop_count.apply();
+            }
         }
     }
 }

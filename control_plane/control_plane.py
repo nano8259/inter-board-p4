@@ -29,14 +29,10 @@ q_num = 1
 # queue
 CONTROL_QID = 0
 OQ_QID = 0
-CQ1_QID = 2
-CQ2_QID = 3
-CQ1_NEW_QID = 4
 
-# Parameters in experiment
-XON_THRESHOLD_GHOST = 300
-XOFF_THRESHOLD_GHOST = 600
-QLENGTH_CELL = 1200
+# random drop
+MAX_RANDOM_NUMBER = 0xFFFF
+DROP_RATIO = 0.05
 
 
 class Port:
@@ -106,6 +102,7 @@ class Controller(BfRuntimeTest):
         self.setup_l3_forward()
         self.setup_max_qlenth()
         self.setup_packet_count()
+        self.setup_random_drop()
         
     def runTest(self):
         print("runTest")
@@ -368,6 +365,39 @@ class Controller(BfRuntimeTest):
                                                    gc.KeyTuple('hdr.ipv4.dst_addr', self.mpu_port.peer_addr)])],
                     [eg_tbl_packet_count.make_data([gc.DataTuple('SwitchEgress.reg_eg_packet_count.f1', 0)],
                                                    'SwitchEgress.act_eg_packet_count_inc')])
+                
+    def setup_random_drop(self):
+        tbl_drop_determine = self.bfrt_info.table_get("SwitchEgress.tbl_drop_determine")
+        tbl_random_drop_count = self.bfrt_info.table_get("SwitchEgress.tbl_random_drop_count")
+        tbl_random_drop_count.info.key_field_annotation_add("hdr.ipv4.src_addr", "ipv4")
+        tbl_random_drop_count.info.key_field_annotation_add("hdr.ipv4.dst_addr", "ipv4")
+        # random drop determine
+        self.safe_entry_add(
+            tbl_drop_determine,
+            self.target,
+            [tbl_drop_determine.make_key([gc.KeyTuple('eg_md.rand_num', low=0, high=int(MAX_RANDOM_NUMBER * DROP_RATIO))])],
+            [tbl_drop_determine.make_data([],'SwitchEgress.set_is_drop')])
+        # random drop count
+        for p in self.ports + self.inner_ports:
+            for lp in self.lpu_port:
+                # flows form mpu to lpus
+                self.safe_entry_add(
+                    tbl_random_drop_count,
+                    self.target,
+                    [tbl_random_drop_count.make_key([gc.KeyTuple('eg_intr_md.egress_port', p.dp),
+                                                   gc.KeyTuple('hdr.ipv4.src_addr', self.mpu_port.peer_addr),
+                                                   gc.KeyTuple('hdr.ipv4.dst_addr', lp.peer_addr)])],
+                    [tbl_random_drop_count.make_data([gc.DataTuple('SwitchEgress.reg_random_drop_count.f1', 0)],
+                                                   'SwitchEgress.act_random_drop_count_inc')])
+                # flows form lpus to mpu
+                self.safe_entry_add(
+                    tbl_random_drop_count,
+                    self.target,
+                    [tbl_random_drop_count.make_key([gc.KeyTuple('eg_intr_md.egress_port', p.dp),
+                                                   gc.KeyTuple('hdr.ipv4.src_addr', lp.peer_addr),
+                                                   gc.KeyTuple('hdr.ipv4.dst_addr', self.mpu_port.peer_addr)])],
+                    [tbl_random_drop_count.make_data([gc.DataTuple('SwitchEgress.reg_random_drop_count.f1', 0)],
+                                                   'SwitchEgress.act_random_drop_count_inc')])
         
 # Type transformation functions
 def make_port(pipe, local_port):
