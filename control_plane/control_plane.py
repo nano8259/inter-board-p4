@@ -73,11 +73,11 @@ class Controller(BfRuntimeTest):
         self.ports = []
         self.ports.append(Port("1/0", 392, "10G", "BF_FEC_TYP_NONE", "172.16.100.2", 0xec0d9abfdf75))
         self.ports.append(Port("2/0", 400, "10G", "BF_FEC_TYP_NONE", "172.16.100.12", 0xec0d9aa418ff))
-        self.ports.append(Port("9/0", 64, "10G", "BF_FEC_TYP_NONE", "172.16.100.14", 0xec0d9abfdcbd))
+        # self.ports.append(Port("9/0", 64, "10G", "BF_FEC_TYP_NONE", "172.16.100.14", 0xec0d9abfdcbd))
         self.ports.append(Port("10/0", 56, "10G", "BF_FEC_TYP_NONE", "172.16.100.6", 0xec0d9abfdcb5))
         self.ports.append(Port("11/0", 48, "10G", "BF_FEC_TYP_NONE", "172.16.100.13", 0x043f72c0639e))
         self.ports.append(Port("12/0", 40, "10G", "BF_FEC_TYP_NONE", "172.16.100.14", 0x043f72c0656e))
-        self.ports.append(Port("13/0", 32, "10G", "BF_FEC_TYP_NONE", "172.16.100.15", 0xec0d9abfd92c))
+        # self.ports.append(Port("13/0", 32, "10G", "BF_FEC_TYP_NONE", "172.16.100.15", 0xec0d9abfd92c))
         self.ports.append(Port("17/0", 136, "10G", "BF_FEC_TYP_NONE", "172.16.100.19", 0xec0d9aa4190f))
         self.ports.append(Port("18/0", 144, "10G", "BF_FEC_TYP_NONE", "172.16.100.20", 0x043f72c060e6))
         
@@ -331,7 +331,7 @@ class Controller(BfRuntimeTest):
                 forward_table,
                 self.target,
                 [forward_table.make_key([gc.KeyTuple('$MATCH_PRIORITY', 5),
-                                        gc.KeyTuple('hdr.ipv4.dst_addr', ((0b111100 << 9) + p.dp) << 16, 0xFE00),
+                                        gc.KeyTuple('hdr.ipv4.dst_addr', ((0b1111000 << 9) + p.dp) << 16, 0xFFFF0000),
                                         gc.KeyTuple('ig_intr_md.ingress_port', 0, 0)])],
                 [forward_table.make_data([gc.DataTuple('port', p.dp),
                                         gc.DataTuple('qid', OQ_QID),

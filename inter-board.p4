@@ -186,6 +186,26 @@ control SwitchIngress(
         registers = reg_ig_packet_count;
     }
 
+    action act_data_packet(){}
+    action act_no_data_packet(){}
+    table tbl_data_packet_judge {
+        key = {
+            hdr.tcp.isValid() : ternary;
+            hdr.udp.isValid() : ternary;
+            hdr.ethernet.src_addr : ternary;
+        }
+        actions = {
+            act_data_packet;
+            act_no_data_packet;
+        }
+        const entries = {
+            (_, _, 48w0): act_no_data_packet();
+            (true, false, _): act_data_packet();
+            (false, true, _): act_data_packet();
+        }
+        size = 8;
+    }
+
     apply {
         if (hdr.arp.isValid()){
             arp_proxy.apply();
@@ -193,9 +213,17 @@ control SwitchIngress(
         if (hdr.ipv4.isValid()) {
             forward.apply();
         }
-        if (hdr.udp.isValid() || hdr.tcp.isValid()){
-            tbl_ig_packet_count.apply();
+        switch(tbl_data_packet_judge.apply().action_run) {
+            act_data_packet : {
+                tbl_ig_packet_count.apply();
+            }
+            act_no_data_packet : {
+                // do nothing
+            }
         }
+        // if (hdr.udp.isValid() || hdr.tcp.isValid()){
+        //     tbl_ig_packet_count.apply();
+        // }
     }
 }
 
@@ -433,21 +461,57 @@ control SwitchEgress(
         registers = reg_drop_point_record;
     }
 
+    action act_data_packet(){}
+    action act_no_data_packet(){}
+    table tbl_data_packet_judge {
+        key = {
+            hdr.tcp.isValid() : ternary;
+            hdr.udp.isValid() : ternary;
+            hdr.ethernet.src_addr : ternary;
+        }
+        actions = {
+            act_data_packet;
+            act_no_data_packet;
+        }
+        const entries = {
+            (_, _, 48w0): act_no_data_packet();
+            (true, false, _): act_data_packet();
+            (false, true, _): act_data_packet();
+        }
+        size = 8;
+    }
+
     apply{
         tbl_max_queue_length.apply();
         tbl_random_point_write_judge.apply();
         tbl_drop_point_record.apply();
-        if (hdr.udp.isValid() || hdr.tcp.isValid()){
-            tbl_eg_packet_count.apply();
-            // random drop
-            eg_md.rand_num = rnd1.get();
-            eg_md.rand_diff = eg_md.rand_num |-| eg_md.rand_point;
-            tbl_drop_judge.apply();
-            if (eg_md.is_drop == 1w1){
-                eg_dprsr_md.drop_ctl = 0x1;
-                tbl_random_drop_count.apply();
+        switch(tbl_data_packet_judge.apply().action_run) {
+            act_data_packet : {
+                tbl_eg_packet_count.apply();
+                // random drop
+                eg_md.rand_num = rnd1.get();
+                eg_md.rand_diff = eg_md.rand_num |-| eg_md.rand_point;
+                tbl_drop_judge.apply();
+                if (eg_md.is_drop == 1w1){
+                    eg_dprsr_md.drop_ctl = 0x1;
+                    tbl_random_drop_count.apply();
+                }
+            }
+            act_no_data_packet : {
+                // do nothing
             }
         }
+        // if (hdr.udp.isValid() || hdr.tcp.isValid()){
+        //     tbl_eg_packet_count.apply();
+        //     // random drop
+        //     eg_md.rand_num = rnd1.get();
+        //     eg_md.rand_diff = eg_md.rand_num |-| eg_md.rand_point;
+        //     tbl_drop_judge.apply();
+        //     if (eg_md.is_drop == 1w1){
+        //         eg_dprsr_md.drop_ctl = 0x1;
+        //         tbl_random_drop_count.apply();
+        //     }
+        // }
     }
 }
 
