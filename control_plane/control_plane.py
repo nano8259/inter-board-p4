@@ -34,6 +34,10 @@ OQ_QID = 0
 MAX_RANDOM_NUMBER = 0xFFFF
 DROP_RATIO = 0
 
+# max queue length
+MAX_QLENGTH = 2e4  # B
+MAX_QLENGTH_CELL = int(MAX_QLENGTH * 8 / 176)
+
 
 class Port:
     def __init__(self, name, dp, speed="100G", fec="BF_FEC_TYP_NONE", peer_addr = None, peer_mac = None):
@@ -98,9 +102,10 @@ class Controller(BfRuntimeTest):
         except Exception as exc:
             raise Exception("Failed to initialize ThriftInterfaceDataPlane") from exc
         
-        self.setup_ports()        
+        self.setup_ports()
+        self.setup_qlength()
         self.setup_l3_forward()
-        self.setup_max_qlenth()
+        self.setup_max_qlenth_table()
         self.setup_packet_count()
         self.setup_random_drop()
         
@@ -174,6 +179,14 @@ class Controller(BfRuntimeTest):
         #     self.tidp.tm.tm_set_port_q_mapping_adv(self.dev, p.dp, q_count, list(range(q_count)))
             
         # self.tidp.tm.tm_complete_operations(self.dev)
+        
+    def setup_qlength(self):
+        for p in self.ports + self.inner_ports:
+            for q in range(q_num):
+                self.tidp.tm.tm_set_q_guaranteed_min_limit(self.dev, p.dp, q, MAX_QLENGTH_CELL)
+                # dev, port, q, pool, base_use_limit, dynamic_baf, hysteresis
+                self.tidp.tm.tm_set_q_app_pool_usage(self.dev, p.dp, q, 
+                    AppPool.BF_TM_EG_APP_POOL_0.value, 0, QueueBaf.BF_TM_Q_BAF_DISABLE.value, 0)
         
     def setup_l3_forward(self):
         forward_table = self.bfrt_info.table_get("SwitchIngress.forward")
@@ -323,7 +336,7 @@ class Controller(BfRuntimeTest):
                                         gc.DataTuple('ingress_cos', 0)],
                                         'SwitchIngress.hit')])
             
-    def setup_max_qlenth(self):
+    def setup_max_qlenth_table(self):
         tbl_max_queue_length = self.bfrt_info.table_get("SwitchEgress.tbl_max_queue_length")
         for p in self.ports + self.inner_ports:
             for q in range(q_num):

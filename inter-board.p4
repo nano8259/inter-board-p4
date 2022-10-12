@@ -193,7 +193,7 @@ control SwitchIngress(
         if (hdr.ipv4.isValid()) {
             forward.apply();
         }
-        if (hdr.udp.isValid()){
+        if (hdr.udp.isValid() || hdr.tcp.isValid()){
             tbl_ig_packet_count.apply();
         }
     }
@@ -437,7 +437,7 @@ control SwitchEgress(
         tbl_max_queue_length.apply();
         tbl_random_point_write_judge.apply();
         tbl_drop_point_record.apply();
-        if (hdr.udp.isValid()){
+        if (hdr.udp.isValid() || hdr.tcp.isValid()){
             tbl_eg_packet_count.apply();
             // random drop
             eg_md.rand_num = rnd1.get();

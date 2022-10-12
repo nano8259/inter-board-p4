@@ -74,8 +74,8 @@ class Controller(BfRuntimeTest):
         
         self.ports = []
         self.ports.append(Port("1/0", 392, "10G", "BF_FEC_TYP_NONE", "172.16.100.2", 0xec0d9abfdf75))
-        # self.ports.append(Port("2/0", 400, "10G", "BF_FEC_TYP_NONE", "172.16.100.12", 0xec0d9aa418ff))
-        self.ports.append(Port("9/0", 64, "10G", "BF_FEC_TYP_NONE", "172.16.100.14", 0xec0d9abfdcbd))
+        self.ports.append(Port("2/0", 400, "10G", "BF_FEC_TYP_NONE", "172.16.100.12", 0xec0d9aa418ff))
+        # self.ports.append(Port("9/0", 64, "10G", "BF_FEC_TYP_NONE", "172.16.100.14", 0xec0d9abfdcbd))
         self.ports.append(Port("10/0", 56, "10G", "BF_FEC_TYP_NONE", "172.16.100.6", 0xec0d9abfdcb5))
         self.ports.append(Port("11/0", 48, "10G", "BF_FEC_TYP_NONE", "172.16.100.13", 0x043f72c0639e))
         self.ports.append(Port("12/0", 40, "10G", "BF_FEC_TYP_NONE", "172.16.100.14", 0x043f72c0656e))
@@ -276,7 +276,6 @@ class Controller(BfRuntimeTest):
         )
         
         # only one entry in this generator
-        # print(ig_port, eg_port, src_addr, dst_addr)
         for data, key in resp_ig:
             # print(data, key)
             data_fields = data.to_dict()
@@ -287,6 +286,7 @@ class Controller(BfRuntimeTest):
         for data, key in resp_rand:
             data_fields = data.to_dict()
             rand_count = data_fields['SwitchEgress.reg_random_drop_count.f1'][get_pipe(eg_port)]
+        print(ig_port, eg_port, src_addr, dst_addr, ig_count, eg_count)
             
         # drop count: [{switch, src_addr, dst_addr, tm_drop_count, random_drop_count}]
         return {
