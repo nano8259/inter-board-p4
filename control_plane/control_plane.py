@@ -310,6 +310,19 @@ class Controller(BfRuntimeTest):
                                       gc.DataTuple('reply_ip', p.peer_addr)],
                                      'SwitchIngress.reply_arp')])
             
+        # forward drop indicate packet
+        for p in self.port + self.inner_ports:
+            self.safe_entry_add(
+                forward_table,
+                self.target,
+                [forward_table.make_key([gc.KeyTuple('$MATCH_PRIORITY', 5),
+                                        gc.KeyTuple('hdr.ipv4.dst_addr', (0b111100 << 9 + p.dp) << 16, 0xFE00),
+                                        gc.KeyTuple('ig_intr_md.ingress_port', 0, 0)])],
+                [forward_table.make_data([gc.DataTuple('port', p.dp),
+                                        gc.DataTuple('qid', OQ_QID),
+                                        gc.DataTuple('ingress_cos', 0)],
+                                        'SwitchIngress.hit')])
+            
     def setup_max_qlenth(self):
         tbl_max_queue_length = self.bfrt_info.table_get("SwitchEgress.tbl_max_queue_length")
         for p in self.ports + self.inner_ports:

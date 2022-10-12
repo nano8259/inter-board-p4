@@ -41,6 +41,8 @@ struct headers_t {
 struct ingress_metadata_t {}
 
 struct egress_metadata_t {
+    bool is_rand_point_write;
+    bit<16> rand_point;
     bit<16> rand_num;
     bool is_drop;
 }
@@ -363,14 +365,69 @@ control SwitchEgress(
         registers = reg_random_drop_count;
     }
 
+    action act_random_point_write_true(){
+        // drop this packet
+        eg_dprsr_md.drop_ctl = 0x1;
+        eg_md.is_rand_point_write = true;
+    }
+    action act_random_point_write_false(){
+        eg_md.is_rand_point_write = false;
+    }
+    table tbl_random_point_write_judge {
+        key = {
+            hdr.ipv4.dst_addr : ternary;
+        }
+        actions = {
+            act_random_point_write_true;
+            act_random_point_write_false;
+        }
+        const entries = {
+            0xF0000000 &&& 0xFE000000 : act_random_point_write_true();
+        }
+        const default_action = act_random_point_write_false();
+        size = 2;
+    }
+
+    DirectRegister<bit<16>>() reg_drop_point_record;
+    DirectRegisterAction<bit<16>, bit<16>>(reg_drop_point_record) regact_drop_point_record_write = {
+        void apply(inout bit<16> val) {
+            val = hdr.ipv4.dst_addr[15:0];
+        }
+    };
+    action act_drop_point_record_write() {
+        regact_drop_point_record_write.execute();
+    }
+    DirectRegisterAction<bit<16>, bit<16>>(reg_drop_point_record) regact_drop_point_record_read = {
+        void apply(inout bit<16> val, out bit<16> ret) {
+            ret = val;
+        }
+    };
+    action act_drop_point_record_read() {
+        eg_md.rand_point = regact_drop_point_record_read.execute();
+    }
+    table tbl_drop_point_record {
+        key = {
+            eg_md.is_rand_point_write : exact;
+            eg_intr_md.egress_port : exact;
+        }
+        actions = {
+            act_drop_point_record_write;
+            act_drop_point_record_read;
+        }
+        size = 64;
+        registers = reg_drop_point_record;
+    }
+
     apply{
         tbl_max_queue_length.apply();
+        tbl_random_point_write_judge.apply();
+        tbl_drop_point_record.apply();
         if (hdr.udp.isValid()){
             tbl_eg_packet_count.apply();
             // random drop
             eg_md.rand_num = rnd1.get();
-            tbl_drop_determine.apply();
-            if (eg_md.is_drop){
+            // tbl_drop_determine.apply();
+            if (eg_md.rand_num < eg_md.rand_point){
                 eg_dprsr_md.drop_ctl = 0x1;
                 tbl_random_drop_count.apply();
             }
