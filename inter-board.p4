@@ -44,7 +44,8 @@ struct egress_metadata_t {
     bool is_rand_point_write;
     bit<16> rand_point;
     bit<16> rand_num;
-    bool is_drop;
+    bit<16> rand_diff;
+    bit<1> is_drop;
 }
 
 // ---------------------------------------------------------------------------
@@ -322,25 +323,35 @@ control SwitchEgress(
         registers = reg_eg_packet_count;
     }
 
-    // define 16b random number generator
+    // define 12b random number generator
     // if 32b, cannot perform a range match on key which does not fit in under 5 PHV nibbles
+    // can't compare bigger than 12 bist in p4
     Random<bit<16>>() rnd1;
-    action set_is_drop(){
-        eg_md.is_drop = true;
+    // use SALU to perform compare
+    // ERROR: Can't have more than one phv_ixb operand to an SALU compare
+    Register<bit<16>, bit<1>>(1, 1) reg_random_drop_judge;
+    RegisterAction<bit<16>, bit<1>, bit<16>>(reg_random_drop_judge) regact_random_drop_judge = {
+        void apply(inout bit<16> val, out bit<16> rv) {
+            // if rand_point == 0, we don't want drop any packet
+            if (eg_md.rand_diff == 0 && eg_md.rand_point != 0){
+                rv = 16w1;
+            } else {
+                rv = 16w0;
+            }
+        }
+    };
+    action act_random_drop_judge(){
+        eg_md.is_drop = regact_random_drop_judge.execute(0)[0:0];
     }
-    action set_not_drop(){
-        eg_md.is_drop = false;
-    }
-    table tbl_drop_determine {
+    table tbl_drop_judge {
         key = {
-            eg_md.rand_num : range;
+            
         }
         actions = {
-            set_is_drop;
-            set_not_drop;
+            act_random_drop_judge;
         }
-        const default_action = set_not_drop();
-        size = 1024;
+        const default_action = act_random_drop_judge();
+        size = 1;
     }
     
     DirectRegister<bit<32>>() reg_random_drop_count;
@@ -389,32 +400,36 @@ control SwitchEgress(
     }
 
     DirectRegister<bit<16>>() reg_drop_point_record;
-    DirectRegisterAction<bit<16>, bit<16>>(reg_drop_point_record) regact_drop_point_record_write = {
-        void apply(inout bit<16> val) {
-            val = hdr.ipv4.dst_addr[15:0];
-        }
-    };
-    action act_drop_point_record_write() {
-        regact_drop_point_record_write.execute();
-    }
-    DirectRegisterAction<bit<16>, bit<16>>(reg_drop_point_record) regact_drop_point_record_read = {
+    // DirectRegisterAction<bit<16>, bit<16>>(reg_drop_point_record) regact_drop_point_record_write = {
+    //     void apply(inout bit<16> val) {
+    //         val = hdr.ipv4.dst_addr[15:0];
+    //     }
+    // };
+    // action act_drop_point_record_write() {
+    //     regact_drop_point_record_write.execute();
+    // }
+    DirectRegisterAction<bit<16>, bit<16>>(reg_drop_point_record) regact_drop_point_record_op = {
         void apply(inout bit<16> val, out bit<16> ret) {
-            ret = val;
+            if (eg_md.is_rand_point_write){
+                val = hdr.ipv4.dst_addr[15:0];
+            } else {
+                ret = val;
+            }
         }
     };
-    action act_drop_point_record_read() {
-        eg_md.rand_point = regact_drop_point_record_read.execute();
+    action act_drop_point_record_op() {
+        eg_md.rand_point = regact_drop_point_record_op.execute();
     }
     table tbl_drop_point_record {
         key = {
-            eg_md.is_rand_point_write : exact;
+            // eg_md.is_rand_point_write : exact;
             eg_intr_md.egress_port : exact;
         }
         actions = {
-            act_drop_point_record_write;
-            act_drop_point_record_read;
+            // act_drop_point_record_write;
+            act_drop_point_record_op;
         }
-        size = 64;
+        size = 32;
         registers = reg_drop_point_record;
     }
 
@@ -426,8 +441,9 @@ control SwitchEgress(
             tbl_eg_packet_count.apply();
             // random drop
             eg_md.rand_num = rnd1.get();
-            // tbl_drop_determine.apply();
-            if (eg_md.rand_num < eg_md.rand_point){
+            eg_md.rand_diff = eg_md.rand_num |-| eg_md.rand_point;
+            tbl_drop_judge.apply();
+            if (eg_md.is_drop == 1w1){
                 eg_dprsr_md.drop_ctl = 0x1;
                 tbl_random_drop_count.apply();
             }

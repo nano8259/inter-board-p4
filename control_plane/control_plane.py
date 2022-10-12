@@ -311,12 +311,12 @@ class Controller(BfRuntimeTest):
                                      'SwitchIngress.reply_arp')])
             
         # forward drop indicate packet
-        for p in self.port + self.inner_ports:
+        for p in self.ports + self.inner_ports:
             self.safe_entry_add(
                 forward_table,
                 self.target,
                 [forward_table.make_key([gc.KeyTuple('$MATCH_PRIORITY', 5),
-                                        gc.KeyTuple('hdr.ipv4.dst_addr', (0b111100 << 9 + p.dp) << 16, 0xFE00),
+                                        gc.KeyTuple('hdr.ipv4.dst_addr', ((0b111100 << 9) + p.dp) << 16, 0xFE00),
                                         gc.KeyTuple('ig_intr_md.ingress_port', 0, 0)])],
                 [forward_table.make_data([gc.DataTuple('port', p.dp),
                                         gc.DataTuple('qid', OQ_QID),
@@ -380,16 +380,18 @@ class Controller(BfRuntimeTest):
                                                    'SwitchEgress.act_eg_packet_count_inc')])
                 
     def setup_random_drop(self):
-        tbl_drop_determine = self.bfrt_info.table_get("SwitchEgress.tbl_drop_determine")
+        tbl_drop_point_record = self.bfrt_info.table_get("SwitchEgress.tbl_drop_point_record")
         tbl_random_drop_count = self.bfrt_info.table_get("SwitchEgress.tbl_random_drop_count")
         tbl_random_drop_count.info.key_field_annotation_add("hdr.ipv4.src_addr", "ipv4")
         tbl_random_drop_count.info.key_field_annotation_add("hdr.ipv4.dst_addr", "ipv4")
-        # random drop determine
-        self.safe_entry_add(
-            tbl_drop_determine,
-            self.target,
-            [tbl_drop_determine.make_key([gc.KeyTuple('eg_md.rand_num', low=0, high=int(MAX_RANDOM_NUMBER * DROP_RATIO))])],
-            [tbl_drop_determine.make_data([],'SwitchEgress.set_is_drop')])
+        # drop point record
+        for p in self.ports + self.inner_ports:
+            self.safe_entry_add(
+                tbl_drop_point_record,
+                self.target,
+                [tbl_drop_point_record.make_key([gc.KeyTuple('eg_intr_md.egress_port', p.dp)])],
+                [tbl_drop_point_record.make_data([gc.DataTuple('SwitchEgress.reg_drop_point_record.f1', 0)],
+                                                'SwitchEgress.act_drop_point_record_op')])
         # random drop count
         for p in self.ports + self.inner_ports:
             for lp in self.lpu_port:
