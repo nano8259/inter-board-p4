@@ -30,6 +30,8 @@ p4_name = "inter-board"
 ports = []
 q_num = 1
 
+LPU_PER_BOARD = 3
+
 # queue
 CONTROL_QID = 0
 OQ_QID = 0
@@ -178,11 +180,11 @@ class Controller(BfRuntimeTest):
         }
         lsw2_port = {
             'up_port': self.inner_ports[3],
-            'down_port': self.lpu_port[:4]
+            'down_port': self.lpu_port[:LPU_PER_BOARD]
         }
         lsw3_port = {
             'up_port': self.inner_ports[5],
-            'down_port': self.lpu_port[4:]
+            'down_port': self.lpu_port[LPU_PER_BOARD:]
         }
         
         # route for mpu->lpu
