@@ -32,7 +32,7 @@ OQ_QID = 0
 
 # random drop
 MAX_RANDOM_NUMBER = 0xFFFF
-DROP_RATIO = 0.05
+DROP_RATIO = 0
 
 
 class Port:

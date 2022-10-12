@@ -1,35 +1,35 @@
-14:25:13.975  root      : INFO    : ++++++++ Tue Oct 11 14:25:13 2022 ++++++++
-14:25:14.037  getmac    : DEBUG   : Raw MAC found: 00:28:9f:14:54:38
+08:07:22.203  root      : INFO    : ++++++++ Wed Oct 12 08:07:22 2022 ++++++++
+08:07:22.263  getmac    : DEBUG   : Raw MAC found: 00:28:9f:14:54:38
 
-14:25:14.096  root      : DEBUG   : Parsed test parameters:
-14:25:14.096  root      : DEBUG   : 	*grpc_server=localhost
-14:25:14.096  root      : DEBUG   : 	*use_pi=False
-14:25:14.096  root      : DEBUG   : 	*test_seed=None
-14:25:14.096  root      : DEBUG   : 	*num_pipes=4
-14:25:14.096  root      : DEBUG   : 	*reboot=none
-14:25:14.097  root      : DEBUG   : 	*p4c=
-14:25:14.097  root      : DEBUG   : 	*thrift_server=localhost
-14:25:14.097  root      : DEBUG   : 	*drivers_test_info=None
-14:25:14.097  root      : DEBUG   : 	*traffic_gen=None
-14:25:14.097  root      : DEBUG   : 	*config_file=filename
-14:25:14.097  root      : DEBUG   : 	*counter_byte_adjust=0
-14:25:14.097  root      : DEBUG   : 	*arch=tofino2
-14:25:14.097  root      : DEBUG   : 	*cleanup=False
-14:25:14.097  root      : DEBUG   : 	*p4_name=
-14:25:14.097  root      : DEBUG   : 	*setup=False
-14:25:14.097  root      : DEBUG   : 	*port_mode=100g
-14:25:14.097  root      : DEBUG   : 	*target=asic-model
-14:25:14.097  root      : DEBUG   : If something is missing, make sure you used the correct syntax: --test-params="[k=v;]*k=v"
-14:25:14.264  root      : INFO    : Importing platform: eth
-14:25:14.265  root      : DEBUG   : Configuration: {'failfast': False, 'debug': 'verbose', 'disable_mpls': False, 'disable_nvgre': False, 'profile': False, 'xunit_dir': 'xunit', 'random_seed': None, 'log_dir': None, 'port_map': {(0, 22): 'veth29', (0, 21): 'veth27', (0, 15): 'veth15', (0, 20): 'veth25', (0, 14): 'veth13', (0, 19): 'veth23', (0, 24): 'veth33', (0, 13): 'veth11', (0, 18): 'veth21', (0, 12): 'veth9', (0, 17): 'veth19', (0, 11): 'veth7', (0, 16): 'veth17', (0, 10): 'veth5', (0, 9): 'veth3', (0, 8): 'veth1', (0, 2): 'veth251', (0, 23): 'veth31'}, 'disable_erspan': False, 'test_file': None, 'default_negative_timeout': 0.1, 'profile_file': 'profile.out', 'platform_dir': '/home/admin/bf-sde-9.7.1/install/lib/python3.5/site-packages/bf-ptf/ptf/platforms', 'socket_recv_size': 10240, 'test_order': 'default', 'interfaces': [(0, 8, 'veth1'), (0, 9, 'veth3'), (0, 10, 'veth5'), (0, 11, 'veth7'), (0, 12, 'veth9'), (0, 13, 'veth11'), (0, 14, 'veth13'), (0, 15, 'veth15'), (0, 16, 'veth17'), (0, 17, 'veth19'), (0, 18, 'veth21'), (0, 19, 'veth23'), (0, 20, 'veth25'), (0, 21, 'veth27'), (0, 22, 'veth29'), (0, 23, 'veth31'), (0, 24, 'veth33'), (0, 2, 'veth251')], 'disable_igmp': False, 'platform_args': None, 'default_timeout': 2.0, 'allow_user': False, 'list': False, 'device_sockets': [], 'log_file': 'ptf.log', 'disable_geneve': False, 'test_dir': '.', 'test_params': "arch='tofino2';p4_name='';target='asic-model';use_pi='False';traffic_gen='None';config_file='filename';drivers_test_info='None';test_seed='None';num_pipes='4';port_mode='100g';counter_byte_adjust='0';setup=False;cleanup=False;p4c='';thrift_server='localhost';grpc_server='localhost';reboot='none';", 'test_spec': '', 'test_case_timeout': None, 'fail_skipped': False, 'relax': False, 'disable_ipv6': False, 'list_test_names': False, 'qlen': 100, 'disable_rocev2': False, 'disable_vxlan': False, 'xunit': False, 'platform': 'eth', 'port_info': {}, 'minsize': 0, 'test_order_seed': 2746}
-14:25:14.265  root      : INFO    : port map: {(0, 22): 'veth29', (0, 21): 'veth27', (0, 15): 'veth15', (0, 20): 'veth25', (0, 14): 'veth13', (0, 19): 'veth23', (0, 24): 'veth33', (0, 13): 'veth11', (0, 18): 'veth21', (0, 12): 'veth9', (0, 17): 'veth19', (0, 11): 'veth7', (0, 16): 'veth17', (0, 10): 'veth5', (0, 9): 'veth3', (0, 8): 'veth1', (0, 2): 'veth251', (0, 23): 'veth31'}
-14:25:14.265  root      : INFO    : Autogen random seed: 55781571
-14:25:14.357  root      : INFO    : *** TEST RUN START: Tue Oct 11 14:25:14 2022
-14:25:14.363  bfruntime_grpc_client: INFO    : Subscribe attempt #1
-14:25:14.365  bfruntime_grpc_client: INFO    : Subscribe response received 0
-14:25:14.365  bfruntime_grpc_client: INFO    : Binding with p4_name inter-board
-14:25:14.366  bfruntime_grpc_client: INFO    : Binding with p4_name inter-board successful!!
-14:25:14.420  bfruntime_grpc_client: INFO    : Received inter-board on GetForwarding on client 0, device 0
-14:25:14.508  root      : INFO    : ** START TEST CASE pd_base_tests.ThriftInterfaceDataPlane
-14:25:14.661  root      : INFO    : *** TEST RUN END  : Tue Oct 11 14:25:14 2022
-14:25:14.662  dataplane : INFO    : Thread exit
+08:07:22.320  root      : DEBUG   : Parsed test parameters:
+08:07:22.320  root      : DEBUG   : 	*grpc_server=localhost
+08:07:22.320  root      : DEBUG   : 	*counter_byte_adjust=0
+08:07:22.320  root      : DEBUG   : 	*setup=False
+08:07:22.320  root      : DEBUG   : 	*thrift_server=localhost
+08:07:22.320  root      : DEBUG   : 	*config_file=filename
+08:07:22.320  root      : DEBUG   : 	*port_mode=100g
+08:07:22.320  root      : DEBUG   : 	*traffic_gen=None
+08:07:22.321  root      : DEBUG   : 	*use_pi=False
+08:07:22.321  root      : DEBUG   : 	*num_pipes=4
+08:07:22.321  root      : DEBUG   : 	*cleanup=False
+08:07:22.321  root      : DEBUG   : 	*drivers_test_info=None
+08:07:22.321  root      : DEBUG   : 	*p4c=
+08:07:22.321  root      : DEBUG   : 	*test_seed=None
+08:07:22.321  root      : DEBUG   : 	*arch=tofino2
+08:07:22.321  root      : DEBUG   : 	*reboot=none
+08:07:22.321  root      : DEBUG   : 	*p4_name=
+08:07:22.321  root      : DEBUG   : 	*target=asic-model
+08:07:22.321  root      : DEBUG   : If something is missing, make sure you used the correct syntax: --test-params="[k=v;]*k=v"
+08:07:22.479  root      : INFO    : Importing platform: eth
+08:07:22.480  root      : DEBUG   : Configuration: {'xunit_dir': 'xunit', 'disable_erspan': False, 'disable_ipv6': False, 'test_order': 'default', 'xunit': False, 'profile_file': 'profile.out', 'default_timeout': 2.0, 'minsize': 0, 'test_spec': '', 'relax': False, 'test_params': "arch='tofino2';p4_name='';target='asic-model';use_pi='False';traffic_gen='None';config_file='filename';drivers_test_info='None';test_seed='None';num_pipes='4';port_mode='100g';counter_byte_adjust='0';setup=False;cleanup=False;p4c='';thrift_server='localhost';grpc_server='localhost';reboot='none';", 'test_dir': '.', 'socket_recv_size': 10240, 'port_map': {(0, 22): 'veth29', (0, 21): 'veth27', (0, 15): 'veth15', (0, 20): 'veth25', (0, 14): 'veth13', (0, 19): 'veth23', (0, 24): 'veth33', (0, 13): 'veth11', (0, 18): 'veth21', (0, 12): 'veth9', (0, 17): 'veth19', (0, 11): 'veth7', (0, 16): 'veth17', (0, 10): 'veth5', (0, 9): 'veth3', (0, 8): 'veth1', (0, 2): 'veth251', (0, 23): 'veth31'}, 'disable_geneve': False, 'test_order_seed': 2746, 'platform': 'eth', 'fail_skipped': False, 'test_file': None, 'debug': 'verbose', 'disable_vxlan': False, 'log_dir': None, 'platform_dir': '/home/admin/bf-sde-9.7.1/install/lib/python3.5/site-packages/bf-ptf/ptf/platforms', 'disable_rocev2': False, 'allow_user': False, 'failfast': False, 'default_negative_timeout': 0.1, 'list': False, 'interfaces': [(0, 8, 'veth1'), (0, 9, 'veth3'), (0, 10, 'veth5'), (0, 11, 'veth7'), (0, 12, 'veth9'), (0, 13, 'veth11'), (0, 14, 'veth13'), (0, 15, 'veth15'), (0, 16, 'veth17'), (0, 17, 'veth19'), (0, 18, 'veth21'), (0, 19, 'veth23'), (0, 20, 'veth25'), (0, 21, 'veth27'), (0, 22, 'veth29'), (0, 23, 'veth31'), (0, 24, 'veth33'), (0, 2, 'veth251')], 'profile': False, 'log_file': 'ptf.log', 'platform_args': None, 'disable_mpls': False, 'device_sockets': [], 'test_case_timeout': None, 'list_test_names': False, 'qlen': 100, 'random_seed': None, 'disable_igmp': False, 'port_info': {}, 'disable_nvgre': False}
+08:07:22.480  root      : INFO    : port map: {(0, 22): 'veth29', (0, 21): 'veth27', (0, 15): 'veth15', (0, 20): 'veth25', (0, 14): 'veth13', (0, 19): 'veth23', (0, 24): 'veth33', (0, 13): 'veth11', (0, 18): 'veth21', (0, 12): 'veth9', (0, 17): 'veth19', (0, 11): 'veth7', (0, 16): 'veth17', (0, 10): 'veth5', (0, 9): 'veth3', (0, 8): 'veth1', (0, 2): 'veth251', (0, 23): 'veth31'}
+08:07:22.480  root      : INFO    : Autogen random seed: 41833216
+08:07:22.571  root      : INFO    : *** TEST RUN START: Wed Oct 12 08:07:22 2022
+08:07:22.578  bfruntime_grpc_client: INFO    : Subscribe attempt #1
+08:07:22.581  bfruntime_grpc_client: INFO    : Subscribe response received 0
+08:07:22.581  bfruntime_grpc_client: INFO    : Binding with p4_name inter-board
+08:07:22.582  bfruntime_grpc_client: INFO    : Binding with p4_name inter-board successful!!
+08:07:22.642  bfruntime_grpc_client: INFO    : Received inter-board on GetForwarding on client 0, device 0
+08:07:22.727  root      : INFO    : ** START TEST CASE pd_base_tests.ThriftInterfaceDataPlane
+08:07:22.856  root      : INFO    : *** TEST RUN END  : Wed Oct 12 08:07:22 2022
+08:07:22.857  dataplane : INFO    : Thread exit

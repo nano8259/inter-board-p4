@@ -100,7 +100,7 @@ class Controller(BfRuntimeTest):
         except Exception as exc:
             raise Exception("Failed to initialize ThriftInterfaceDataPlane") from exc
         
-        # drop count: [{switch, src_addr, dst_addr, drop_count}]
+        # drop count: [{switch, src_addr, dst_addr, tm_drop_count, random_drop_count}]
         self.drop_count = []
         self.read_drop_count()
         self.print_drop_count()
@@ -151,10 +151,13 @@ class Controller(BfRuntimeTest):
     def read_drop_count(self):
         ig_tbl_packet_count = self.bfrt_info.table_get("SwitchIngress.tbl_ig_packet_count")
         eg_tbl_packet_count = self.bfrt_info.table_get("SwitchEgress.tbl_eg_packet_count")
+        tbl_random_drop_count = self.bfrt_info.table_get("SwitchEgress.tbl_random_drop_count")
         ig_tbl_packet_count.info.key_field_annotation_add("hdr.ipv4.src_addr", "ipv4")
         ig_tbl_packet_count.info.key_field_annotation_add("hdr.ipv4.dst_addr", "ipv4")
         eg_tbl_packet_count.info.key_field_annotation_add("hdr.ipv4.src_addr", "ipv4")
         eg_tbl_packet_count.info.key_field_annotation_add("hdr.ipv4.dst_addr", "ipv4")
+        tbl_random_drop_count.info.key_field_annotation_add("hdr.ipv4.src_addr", "ipv4")
+        tbl_random_drop_count.info.key_field_annotation_add("hdr.ipv4.dst_addr", "ipv4")
         
         self.mpu_port = self.ports[0]
         self.lpu_port = self.ports[1:]
@@ -175,66 +178,6 @@ class Controller(BfRuntimeTest):
             'up_port': self.inner_ports[5],
             'down_port': self.lpu_port[4:]
         }
-        
-        # route for lpu->mpu
-        routes_lpu = [
-            # the first hop
-            {
-                'ig_port': p,
-                'eg_port': lsw2_port['up_port']
-            } for p in lsw2_port['down_port']
-        ] + [
-            {
-                'ig_port': p,
-                'eg_port': lsw3_port['up_port']
-            } for p in lsw3_port['down_port']
-        ] + [
-            # the second hop
-            {
-                'ig_port': p,
-                'eg_port': lsw1_port['up_port']
-            } for p in lsw1_port['down_port']
-        ] + [
-            # the third hop
-            {
-                'ig_port': lsw0_port['down_port'],
-                'eg_port': lsw0_port['up_port']
-            }
-        ]
-        # for r in routes_lpu:
-        #     if r['ig_port'] in lsw2_port['down_port']:
-        #         # the first hop
-        #         ig_tbl_packet_count.entry_get(
-        #             self.target,
-        #             [ig_tbl_packet_count.make_key([gc.KeyTuple('ig_intr_md.ingress_port', r['ig_port'].dp),
-        #                                         gc.KeyTuple('hdr.ipv4.src_addr', r['ig_port'].peer_addr),
-        #                                         gc.KeyTuple('hdr.ipv4.dst_addr', self.mpu_port.peer_addr)])],
-        #             from_hw = True
-        #         )
-        #         eg_tbl_packet_count.entry_get(
-        #             self.target,
-        #             [eg_tbl_packet_count.make_key([gc.KeyTuple('eg_intr_md.egress_port', r['eg_port'].dp),
-        #                                         gc.KeyTuple('hdr.ipv4.src_addr', r['ig_port'].peer_addr),
-        #                                         gc.KeyTuple('hdr.ipv4.dst_addr', self.mpu_port.peer_addr)])],
-        #             from_hw = True
-        #         )
-        #     else:
-        #         # other hops
-        #         for lp in self.lpu_port:
-        #             ig_tbl_packet_count.entry_get(
-        #                 self.target,
-        #                 [ig_tbl_packet_count.make_key([gc.KeyTuple('ig_intr_md.ingress_port', r['ig_port'].dp),
-        #                                             gc.KeyTuple('hdr.ipv4.src_addr', lp.peer_addr),
-        #                                             gc.KeyTuple('hdr.ipv4.dst_addr', self.mpu_port.peer_addr)])],
-        #                 {"from_hw": True}
-        #             )
-        #             eg_tbl_packet_count.entry_get(
-        #                 self.target,
-        #                 [eg_tbl_packet_count.make_key([gc.KeyTuple('eg_intr_md.egress_port', r['eg_port'].dp),
-        #                                             gc.KeyTuple('hdr.ipv4.src_addr', lp.peer_addr),
-        #                                             gc.KeyTuple('hdr.ipv4.dst_addr', self.mpu_port.peer_addr)])],
-        #                 {"from_hw": True}
-        #             )
         
         # route for mpu->lpu
         # for simplity, we use other addr in forword
@@ -282,27 +225,28 @@ class Controller(BfRuntimeTest):
             if r['dst_addr'][0] == 0:
                 for lp in self.lpu_port:
                     self.drop_count.append(
-                        self.read_drop_count_once(ig_tbl_packet_count, eg_tbl_packet_count, r['switch'], 
+                        self.read_drop_count_once(ig_tbl_packet_count, eg_tbl_packet_count, tbl_random_drop_count, r['switch'], 
                                               r['eg_port'].dp, r['ig_port'].dp, lp.peer_addr, self.mpu_port.peer_addr))
             else:
                 self.drop_count.append(
-                    self.read_drop_count_once(ig_tbl_packet_count, eg_tbl_packet_count, r['switch'], 
+                    self.read_drop_count_once(ig_tbl_packet_count, eg_tbl_packet_count, tbl_random_drop_count, r['switch'], 
                                               r['eg_port'].dp, r['ig_port'].dp, r['dst_addr'][0], self.mpu_port.peer_addr))
         # mpu->lpu
         for r in routes_mpu:
             if r['dst_addr'][0] == 0:
                 for lp in self.lpu_port:
                     self.drop_count.append(
-                        self.read_drop_count_once(ig_tbl_packet_count, eg_tbl_packet_count, r['switch'], 
+                        self.read_drop_count_once(ig_tbl_packet_count, eg_tbl_packet_count, tbl_random_drop_count, r['switch'], 
                                               r['ig_port'].dp, r['eg_port'].dp, self.mpu_port.peer_addr, lp.peer_addr))
             else:
                 self.drop_count.append(
-                    self.read_drop_count_once(ig_tbl_packet_count, eg_tbl_packet_count, r['switch'], 
+                    self.read_drop_count_once(ig_tbl_packet_count, eg_tbl_packet_count, tbl_random_drop_count, r['switch'], 
                                               r['ig_port'].dp, r['eg_port'].dp, self.mpu_port.peer_addr, r['dst_addr'][0]))
         
-    def read_drop_count_once(self, ig_tbl_packet_count, eg_tbl_packet_count, switch, ig_port, eg_port, src_addr, dst_addr):
+    def read_drop_count_once(self, ig_tbl_packet_count, eg_tbl_packet_count, tbl_random_drop_count, switch, ig_port, eg_port, src_addr, dst_addr):
         ig_count = 0
         eg_count = 0
+        rand_count = 0
         resp_ig = ig_tbl_packet_count.entry_get(
             self.target,
             [ig_tbl_packet_count.make_key([gc.KeyTuple('ig_intr_md.ingress_port', ig_port),
@@ -317,28 +261,41 @@ class Controller(BfRuntimeTest):
                                         gc.KeyTuple('hdr.ipv4.dst_addr', dst_addr)])],
             {"from_hw": True}
         )
+        resp_rand = tbl_random_drop_count.entry_get(
+            self.target,
+            [tbl_random_drop_count.make_key([gc.KeyTuple('eg_intr_md.egress_port', eg_port),
+                                        gc.KeyTuple('hdr.ipv4.src_addr', src_addr),
+                                        gc.KeyTuple('hdr.ipv4.dst_addr', dst_addr)])],
+            {"from_hw": True}
+        )
         
         # only one entry in this generator
-        print(ig_port, eg_port, src_addr, dst_addr)
+        # print(ig_port, eg_port, src_addr, dst_addr)
         for data, key in resp_ig:
-            print(data, key)
+            # print(data, key)
             data_fields = data.to_dict()
-            ig_count = data_fields['SwitchIngress.reg_ig_packet_count.f1'][0]
+            ig_count = data_fields['SwitchIngress.reg_ig_packet_count.f1'][get_pipe(ig_port)]
         for data, key in resp_eg:
             data_fields = data.to_dict()
-            eg_count = data_fields['SwitchEgress.reg_eg_packet_count.f1'][0]
+            eg_count = data_fields['SwitchEgress.reg_eg_packet_count.f1'][get_pipe(eg_port)]
+        for data, key in resp_rand:
+            data_fields = data.to_dict()
+            rand_count = data_fields['SwitchEgress.reg_random_drop_count.f1'][get_pipe(eg_port)]
             
-        # drop count: [{switch, src_ip, dst_ip, drop_count}]
+        # drop count: [{switch, src_addr, dst_addr, tm_drop_count, random_drop_count}]
         return {
             'switch': switch,
             'src_addr': src_addr,
             'dst_addr': dst_addr,
-            'drop_count': ig_count - eg_count
+            'tm_drop_count': ig_count - eg_count,
+            'random_drop_count': rand_count,
+            'random_drop_ratio': float(rand_count) / float(eg_count) if eg_count != 0 else 0
         }
         
     def print_drop_count(self):
         for dc in self.drop_count:
-            print("Flow from " + dc['src_addr'] + "\tto " + dc['dst_addr'] + " \tdrops " + str(dc['drop_count']) + "\tpackets at " + dc['switch'])
+            print("Flow from " + dc['src_addr'] + "\tto " + dc['dst_addr'] + " at " + dc['switch'] + ":\tdrops " + str(dc['tm_drop_count']) + \
+                "\tpackets at tm and randomly drops " + str(dc['random_drop_count']) + "\tpackets with " +  '%.3e' % dc['random_drop_ratio'] + " drop ratio")
         
             
         
@@ -362,3 +319,6 @@ def toInt16(n):
 def toInt32(n):
     n = n & 0xffffffff
     return (n ^ 0x80000000) - 0x80000000
+
+def get_pipe(n):
+    return (n >> 7)
