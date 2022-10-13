@@ -79,7 +79,7 @@ class Controller(BfRuntimeTest):
         self.ports.append(Port("12/0", 40, "10G", "BF_FEC_TYP_NONE", "172.16.100.14", 0x043f72c0656e))
         # self.ports.append(Port("13/0", 32, "10G", "BF_FEC_TYP_NONE", "172.16.100.15", 0xec0d9abfd92c))
         self.ports.append(Port("17/0", 136, "10G", "BF_FEC_TYP_NONE", "172.16.100.19", 0xec0d9aa4190f))
-        self.ports.append(Port("18/0", 144, "10G", "BF_FEC_TYP_NONE", "172.16.100.20", 0x043f72c060e6))
+        self.ports.append(Port("18/0", 144, "10G", "BF_FEC_TYP_NONE", "172.16.100.39", 0x043f72c060e6))
         
         self.inner_ports = []
         for lp in [312, 320, 296, 304, 288, 280]:

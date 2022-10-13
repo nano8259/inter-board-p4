@@ -298,14 +298,15 @@ class Controller(BfRuntimeTest):
             'src_addr': src_addr,
             'dst_addr': dst_addr,
             'tm_drop_count': ig_count - eg_count,
+            'tm_drop_ratio': float(ig_count - eg_count) / float(ig_count) if ig_count != 0 else 0,
             'random_drop_count': rand_count,
             'random_drop_ratio': float(rand_count) / float(eg_count) if eg_count != 0 else 0
         }
         
     def print_drop_count(self):
-        table = PrettyTable(['Flow','Switch','TM drop count','Random drop count', 'Random drop ratio'])
+        table = PrettyTable(['Flow', 'Switch', 'TM drop count', 'TM drop ratio', 'Random drop count', 'Random drop ratio'])
         for dc in self.drop_count:
-            table.add_row([dc['src_addr'] + "->" + dc['dst_addr'], dc['switch'], dc['tm_drop_count'], dc['random_drop_count'], '%.3e' % dc['random_drop_ratio']])
+            table.add_row([dc['src_addr'] + "->" + dc['dst_addr'], dc['switch'], dc['tm_drop_count'], '%.3e' % dc['tm_drop_ratio'], dc['random_drop_count'], '%.3e' % dc['random_drop_ratio']])
             # print("Flow from " + dc['src_addr'] + "\tto " + dc['dst_addr'] + " at " + dc['switch'] + ":\tdrops " + str(dc['tm_drop_count']) + \
             #     "\tpackets at tm and randomly drops " + str(dc['random_drop_count']) + "\tpackets with " +  '%.3e' % dc['random_drop_ratio'] + " drop ratio")
         print(table)
