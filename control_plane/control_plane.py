@@ -37,8 +37,10 @@ MAX_RANDOM_NUMBER = 0xFFFF
 DROP_RATIO = 0
 
 # max queue length
-MAX_QLENGTH = 2e4  # B
+MAX_QLENGTH = 2e5  # B
 MAX_QLENGTH_CELL = int(MAX_QLENGTH * 8 / 176)
+MAX_PORT_RATE = 10000  # Kbps
+MAX_PORT_BURST = 0  # Bytes
 
 
 class Port:
@@ -162,9 +164,7 @@ class Controller(BfRuntimeTest):
                 [port_table.make_key([gc.KeyTuple('$DEV_PORT', p.dp)])],
                 [port_table.make_data([gc.DataTuple('$SPEED', str_val="BF_SPEED_"+p.speed),
                                             gc.DataTuple('$FEC', str_val=p.fec),
-                                            gc.DataTuple('$PORT_ENABLE', bool_val=True),
-                                            gc.DataTuple('$TX_PFC_EN_MAP', 0xff),
-                                            gc.DataTuple('$RX_PFC_EN_MAP', 0xff)])])
+                                            gc.DataTuple('$PORT_ENABLE', bool_val=True)])])
         
         for ip in self.inner_ports:
             port_table.entry_add(
@@ -172,9 +172,7 @@ class Controller(BfRuntimeTest):
                 [port_table.make_key([gc.KeyTuple('$DEV_PORT', ip.dp)])],
                 [port_table.make_data([gc.DataTuple('$SPEED', str_val="BF_SPEED_"+ip.speed),
                                             gc.DataTuple('$FEC', str_val=ip.fec),
-                                            gc.DataTuple('$PORT_ENABLE', bool_val=True),
-                                            gc.DataTuple('$TX_PFC_EN_MAP', 0xff),
-                                            gc.DataTuple('$RX_PFC_EN_MAP', 0xff)])])
+                                            gc.DataTuple('$PORT_ENABLE', bool_val=True)])])
             
         # q_count = 128
         # for p in self.ports:
@@ -189,6 +187,7 @@ class Controller(BfRuntimeTest):
                 # dev, port, q, pool, base_use_limit, dynamic_baf, hysteresis
                 self.tidp.tm.tm_set_q_app_pool_usage(self.dev, p.dp, q, 
                     AppPool.BF_TM_EG_APP_POOL_0.value, 0, QueueBaf.BF_TM_Q_BAF_DISABLE.value, 0)
+                # self.tidp.tm.tm_set_port_shaping_rate(self.dev, p.dp, False, MAX_PORT_RATE, MAX_PORT_BURST)
         
     def setup_l3_forward(self):
         forward_table = self.bfrt_info.table_get("SwitchIngress.forward")
