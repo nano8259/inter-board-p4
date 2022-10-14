@@ -1,252 +1,252 @@
-- dst_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.2
+  tm_drop_count: 0
+  switch: lsw0
   src_addr: 172.16.100.12
-  switch: lsw0
-  tm_drop_count: 0
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.2
+  tm_drop_count: 0
+  switch: lsw0
   src_addr: 172.16.100.6
-  switch: lsw0
-  tm_drop_count: -21
-  tm_drop_ratio: -1.096352695618035e-05
+  tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.2
+  tm_drop_count: 0
+  switch: lsw0
   src_addr: 172.16.100.13
-  switch: lsw0
-  tm_drop_count: 0
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.2
+  tm_drop_count: 0
+  switch: lsw0
   src_addr: 172.16.100.14
-  switch: lsw0
-  tm_drop_count: 0
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.2
+  tm_drop_count: 0
+  switch: lsw0
   src_addr: 172.16.100.19
-  switch: lsw0
-  tm_drop_count: 0
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.2
+  tm_drop_count: 0
+  switch: lsw0
   src_addr: 172.16.100.39
-  switch: lsw0
-  tm_drop_count: 0
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.2
+  tm_drop_count: 0
+  switch: lsw1
   src_addr: 172.16.100.12
-  switch: lsw1
-  tm_drop_count: 0
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.2
+  tm_drop_count: 0
+  switch: lsw1
   src_addr: 172.16.100.6
-  switch: lsw1
-  tm_drop_count: -18
-  tm_drop_ratio: -9.39460634772674e-06
+  tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.2
+  tm_drop_count: 0
+  switch: lsw1
   src_addr: 172.16.100.13
-  switch: lsw1
-  tm_drop_count: 0
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.2
+  tm_drop_count: 0
+  switch: lsw1
   src_addr: 172.16.100.14
-  switch: lsw1
-  tm_drop_count: 0
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.2
+  tm_drop_count: 0
+  switch: lsw1
   src_addr: 172.16.100.19
-  switch: lsw1
-  tm_drop_count: 0
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.2
+  tm_drop_count: 0
+  switch: lsw1
   src_addr: 172.16.100.39
-  switch: lsw1
-  tm_drop_count: 0
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.2
+- random_drop_ratio: 0.058333333333333334
+  dst_addr: 172.16.100.2
+  tm_drop_count: 0
+  switch: lsw2
   src_addr: 172.16.100.12
-  switch: lsw2
-  tm_drop_count: 0
   tm_drop_ratio: 0.0
-  random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.2
+  random_drop_count: 14
+- random_drop_ratio: 0.049985583602002566
+  dst_addr: 172.16.100.2
+  tm_drop_count: 0
+  switch: lsw2
   src_addr: 172.16.100.6
+  tm_drop_ratio: 0.0
+  random_drop_count: 1907
+- random_drop_ratio: 0.05263157894736842
+  dst_addr: 172.16.100.2
+  tm_drop_count: 0
   switch: lsw2
-  tm_drop_count: -51
-  tm_drop_ratio: -2.6593733786295883e-05
-  random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.2
   src_addr: 172.16.100.13
-  switch: lsw2
-  tm_drop_count: 0
   tm_drop_ratio: 0.0
-  random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.2
+  random_drop_count: 13
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.2
+  tm_drop_count: 0
+  switch: lsw3
   src_addr: 172.16.100.14
-  switch: lsw3
-  tm_drop_count: 0
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.2
+  tm_drop_count: 0
+  switch: lsw3
   src_addr: 172.16.100.19
-  switch: lsw3
-  tm_drop_count: 0
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.2
+  tm_drop_count: 0
+  switch: lsw3
   src_addr: 172.16.100.39
-  switch: lsw3
-  tm_drop_count: 0
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.12
-  src_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.12
+  tm_drop_count: 0
   switch: lsw0
-  tm_drop_count: 0
+  src_addr: 172.16.100.2
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.6
-  src_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.6
+  tm_drop_count: 0
   switch: lsw0
-  tm_drop_count: -5
-  tm_drop_ratio: -8.053293474899495e-06
-  random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.13
   src_addr: 172.16.100.2
+  tm_drop_ratio: 0.0
+  random_drop_count: 0
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.13
+  tm_drop_count: 0
   switch: lsw0
-  tm_drop_count: 0
+  src_addr: 172.16.100.2
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.14
-  src_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.14
+  tm_drop_count: 0
   switch: lsw0
-  tm_drop_count: 0
+  src_addr: 172.16.100.2
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.19
-  src_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.19
+  tm_drop_count: 0
   switch: lsw0
-  tm_drop_count: 0
+  src_addr: 172.16.100.2
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.39
-  src_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.39
+  tm_drop_count: 0
   switch: lsw0
-  tm_drop_count: 0
+  src_addr: 172.16.100.2
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.12
-  src_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.12
+  tm_drop_count: 0
   switch: lsw1
-  tm_drop_count: 0
+  src_addr: 172.16.100.2
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.6
-  src_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.6
+  tm_drop_count: 0
   switch: lsw1
-  tm_drop_count: 0
+  src_addr: 172.16.100.2
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.13
-  src_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.13
+  tm_drop_count: 0
   switch: lsw1
-  tm_drop_count: 0
+  src_addr: 172.16.100.2
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.14
-  src_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.14
+  tm_drop_count: 0
   switch: lsw1
-  tm_drop_count: 0
+  src_addr: 172.16.100.2
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.19
-  src_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.19
+  tm_drop_count: 0
   switch: lsw1
-  tm_drop_count: 0
+  src_addr: 172.16.100.2
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.39
-  src_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.39
+  tm_drop_count: 0
   switch: lsw1
-  tm_drop_count: 0
+  src_addr: 172.16.100.2
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.12
-  src_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.12
+  tm_drop_count: 0
   switch: lsw2
-  tm_drop_count: 0
+  src_addr: 172.16.100.2
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.6
-  src_addr: 172.16.100.2
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.6
+  tm_drop_count: 0
   switch: lsw2
-  tm_drop_count: -5
-  tm_drop_ratio: -8.044055684171068e-06
-  random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.13
   src_addr: 172.16.100.2
+  tm_drop_ratio: 0.0
+  random_drop_count: 0
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.13
+  tm_drop_count: 0
   switch: lsw2
-  tm_drop_count: 0
-  tm_drop_ratio: 0.0
-  random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.14
   src_addr: 172.16.100.2
-  switch: lsw3
-  tm_drop_count: 0
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.19
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.14
+  tm_drop_count: 0
+  switch: lsw3
   src_addr: 172.16.100.2
-  switch: lsw3
-  tm_drop_count: 0
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
-- dst_addr: 172.16.100.39
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.19
+  tm_drop_count: 0
+  switch: lsw3
   src_addr: 172.16.100.2
-  switch: lsw3
-  tm_drop_count: 0
   tm_drop_ratio: 0.0
   random_drop_count: 0
-  random_drop_ratio: 0.0
+- random_drop_ratio: 0.0
+  dst_addr: 172.16.100.39
+  tm_drop_count: 0
+  switch: lsw3
+  src_addr: 172.16.100.2
+  tm_drop_ratio: 0.0
+  random_drop_count: 0

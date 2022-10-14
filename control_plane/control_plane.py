@@ -39,8 +39,11 @@ DROP_RATIO = 0
 # max queue length
 MAX_QLENGTH = 2e5  # B
 MAX_QLENGTH_CELL = int(MAX_QLENGTH * 8 / 176)
-MAX_PORT_RATE = 10000  # Kbps
-MAX_PORT_BURST = 0  # Bytes
+
+# rate limiter
+IS_RATE_LIMITER = True
+MAX_PORT_RATE = 1000000  # Kbps
+MAX_PORT_BURST = 9000  # Bytes
 
 
 class Port:
@@ -187,7 +190,9 @@ class Controller(BfRuntimeTest):
                 # dev, port, q, pool, base_use_limit, dynamic_baf, hysteresis
                 self.tidp.tm.tm_set_q_app_pool_usage(self.dev, p.dp, q, 
                     AppPool.BF_TM_EG_APP_POOL_0.value, 0, QueueBaf.BF_TM_Q_BAF_DISABLE.value, 0)
-                # self.tidp.tm.tm_set_port_shaping_rate(self.dev, p.dp, False, MAX_PORT_RATE, MAX_PORT_BURST)
+                if IS_RATE_LIMITER:
+                    self.tidp.tm.tm_enable_port_shaping(self.dev, p.dp)
+                    self.tidp.tm.tm_set_port_shaping_rate(self.dev, p.dp, False, MAX_PORT_BURST, MAX_PORT_RATE)
         
     def setup_l3_forward(self):
         forward_table = self.bfrt_info.table_get("SwitchIngress.forward")
